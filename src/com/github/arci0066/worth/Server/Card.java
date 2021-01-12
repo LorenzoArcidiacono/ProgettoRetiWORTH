@@ -38,7 +38,7 @@ public class Card {
         return null;
     }
 
-    public ANSWER_CODE adjournHistory(String userNickname, CARD_STATUS newCardStatus) {
+    public ANSWER_CODE moveAndAdjournHistory(String userNickname, CARD_STATUS newCardStatus) {
 //TODO       Se il nuovo stato non è compatibile ritorno errore (dovrebbe controllarlo il progetto)
 
         cardStatus = newCardStatus;
