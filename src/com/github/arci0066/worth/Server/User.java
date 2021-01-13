@@ -13,13 +13,9 @@ public class User {
         userStatus = USER_STATUS.OFFLINE;
     }
 
-// ------ Getters -------
+    // ------ Getters -------
     public String getNickname() {
         return nickname;
-    }
-
-    public USER_STATUS getUserStatus() {
-        return userStatus;
     }
 
 // ------ Setters -------
@@ -28,12 +24,24 @@ public class User {
         this.userStatus = USER_STATUS.ONLINE;
     }
 
-    public void logout(){
+    public void logout() {
         userStatus = USER_STATUS.OFFLINE;
     }
 
     // ------ Methods ------
-    public boolean checkCredential(String nickname, String password){
+    public boolean checkCredential(String nickname, String password) {
         return this.nickname.equals(nickname) && this.password.equals(password);
+    }
+
+    public boolean isOnline() {
+        return userStatus.equals(USER_STATUS.ONLINE);
+    }
+
+    @Override
+    public String toString() {
+        return "User{" +
+                "nickname='" + nickname + '\'' +
+                ": " + userStatus +
+                '}';
     }
 }

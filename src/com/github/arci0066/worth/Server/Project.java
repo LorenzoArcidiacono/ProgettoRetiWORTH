@@ -91,6 +91,15 @@ public class Project {
     }
 
     /*
+     * EFFECTS: Controlla se l'utente è registrato al progetto.
+     * RETURN: true se lo è, false altrimenti.
+     */
+    public boolean isUserRegisteredToProject(String userNickname) {
+        return projectUsers.contains(userNickname);
+    }
+
+
+    /*
      * REQUIRES: String != null
      *  && userNickname di un utente registrato (Controllato dal Server)
      *  && projectTitle di un progetto esistente  (Controllato dal Server)
@@ -151,13 +160,8 @@ public class Project {
     }
 
 
-    /*
-     * EFFECTS: Controlla se l'utente è registrato al progetto.
-     * RETURN: true se lo è, false altrimenti.
-     */
-    private boolean isUserRegisteredToProject(String userNickname) {
-        return projectUsers.contains(userNickname);
-    }
+
+
 
     /*
      * REQUIRES: @params != null
@@ -201,4 +205,5 @@ public class Project {
         }
         return selectedList;
     }
+
 }
