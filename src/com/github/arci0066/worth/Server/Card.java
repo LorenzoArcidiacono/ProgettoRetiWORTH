@@ -40,8 +40,15 @@ public class Card {
 
     public ANSWER_CODE moveAndAdjournHistory(String userNickname, CARD_STATUS newCardStatus) {
 //TODO       Se il nuovo stato non è compatibile ritorno errore (dovrebbe controllarlo il progetto)
-
+// TODO: 14/01/21 dovrei aggiornare dopo lo status
+        CARD_STATUS oldCardStatus = cardStatus;
         cardStatus = newCardStatus;
-        return cardHistory.add(userNickname,cardStatus,newCardStatus);
+        return cardHistory.add(userNickname,oldCardStatus,newCardStatus);
+    }
+
+    @Override
+    public String toString() {
+        return "[ Titolo: " + cardTitle +
+                ", Descrizione: " + cardDescription + ']';
     }
 }

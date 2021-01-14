@@ -41,7 +41,7 @@ public class Server {
      *			|| OP_FAIL in caso di errore
      */
     public ANSWER_CODE login(String userNickname, String userPassword) {
-        if (userNickname == null || userPassword == null) {
+        if (isNull(userNickname,userPassword)) {
             return ANSWER_CODE.OP_FAIL;
         }
 
@@ -105,13 +105,16 @@ public class Server {
 
 
     /*
-     * REQUIRES:
      * EFFECTS: Restituisce la lista dei progetti di cui l'utente è membro
      * RETURN: Una stringa contenente i nomi dei progetti
      */
     //Meglio se restituisse una List?
     public String listProjects() {
-        return null;
+        String str = "Progetti:{";
+        for (Project prj : projectsList ) {
+            str += "\n* " + prj.getProjectTitle();
+        }
+        return str + "\n}";
     }
 
     /*
@@ -126,7 +129,7 @@ public class Server {
      */
     public ANSWER_CODE createProject(String projectTitle, String userNickname) {
         //Controllo Parametri
-        if(projectTitle == null || userNickname == null){
+        if(isNull(projectTitle,userNickname)){
             return ANSWER_CODE.OP_FAIL;
         }
         if( findUserByNickname(userNickname) == null ) {
@@ -140,8 +143,6 @@ public class Server {
         return ANSWER_CODE.OP_OK;
     }
 
-
-
     /*
      * REQUIRES: @params != null && userNickname di un utente registrato && projectTitle di un progetto esistente && user registrato al progetto.
      * EFFECTS: Aggiunge l'utente alla lista degli utenti del progetto (senza chiedere conferma all'utente)
@@ -151,7 +152,7 @@ public class Server {
      *			|| OP_FAIL altrimenti.
      */
     public ANSWER_CODE addMember(String projectTitle, String oldUserNickname, String newUserNickname) {
-        if(projectTitle == null || newUserNickname == null || oldUserNickname == null){
+        if(isNull(projectTitle,oldUserNickname,newUserNickname)){
             return ANSWER_CODE.OP_FAIL;
         }
         if( findUserByNickname(newUserNickname) == null || findUserByNickname(oldUserNickname) == null)  {
@@ -173,7 +174,27 @@ public class Server {
      */
     //Meglio se restituisse una List?
     public String showMembers(String projectTitle, String userNickname) {
-        if(projectTitle == null || userNickname == null){
+        if(isNull(projectTitle,userNickname)){
+            return "Errore nella richiesta.";
+        }
+        if( findUserByNickname(userNickname) == null ) {
+            return "L'utente non è registrato";
+        }
+
+        Project prj = findProjectByTitle(projectTitle);
+        if(prj == null){
+            return "Progetto inesistente.";
+        }
+        return prj.getProjectUsers(userNickname);
+    }
+
+    /*
+     * REQUIRES: String != null && user registrato al progetto.
+     * EFFECTS: Restituisce la lista delle com.github.arci0066.worth.extra.Card del progetto
+     * RETURN: Una stringa contenente i titoli delle card divisi per status
+     */
+    public String showCards(String projectTitle, String userNickname) {
+        if(isNull(projectTitle,userNickname)){
             return "Errore nella richiesta.";
         }
         if( findUserByNickname(userNickname) == null ) {
@@ -185,19 +206,7 @@ public class Server {
             return "Progetto inesistente.";
         }
 
-        if(prj.isUserRegisteredToProject(userNickname))
-            return "Utenti del Progetto:"+prj.getProjectUsers().toString();
-        else
-            return "Utente non membro del progetto.";
-    }
-
-    /*
-     * REQUIRES: String != null && user registrato al progetto.
-     * EFFECTS: Restituisce la lista delle com.github.arci0066.worth.extra.Card del progetto
-     * RETURN: Una stringa contenente i titoli delle card divisi per status
-     */
-    public String showCards(String projectTitle) {
-        return null;
+        return prj.showCards(userNickname);
     }
 
     /*
@@ -205,7 +214,16 @@ public class Server {
      * EFFECTS: Restituisce la card corrispondente a cardTitle in pojectTitle se questa esiste
      * RETURN: Una copia della card corrispondente se esiste, null altrimenti.
      */
-    public Card showCard(String projectTitle, String cardTitle) {
+    public Card showCard(String projectTitle, String cardTitle, String cardStatus ,String userNickname) {
+        if(isNull(projectTitle,cardTitle,userNickname)){
+            return null;
+        }
+        if(findUserByNickname(userNickname)==null){
+            return null;
+        }
+        Project prj = findProjectByTitle(projectTitle);
+        if(prj != null)
+            return prj.getCard(cardTitle, cardStatus ,userNickname);
         return null;
     }
 
@@ -217,8 +235,16 @@ public class Server {
      * 			|| PERMISSION_DENIED se l'utente non è registrato al progetto,
      * 			|| OP_FAIL in caso di errore.
      */
-    public ANSWER_CODE addCard(String projectTitle, String cardTitle, String cardDescription) {
-        return ANSWER_CODE.OP_FAIL;
+    public ANSWER_CODE addCard(String projectTitle, String cardTitle, String cardDescription, String userNickname) {
+        if(isNull(projectTitle,cardTitle,cardDescription,userNickname))
+            return ANSWER_CODE.OP_FAIL;
+        if(findUserByNickname(userNickname) == null){
+            return ANSWER_CODE.UNKNOWN_USER;
+        }
+        Project prj = findProjectByTitle(projectTitle);
+        if(prj != null)
+            return prj.addCard(cardTitle,cardDescription,userNickname);
+        return ANSWER_CODE.UNKNOWN_PROJECT;
     }
 
     /*
@@ -231,8 +257,16 @@ public class Server {
      * 			|| PERMISSION_DENIED se l'utente non è registrato al progetto,
      * 			|| OP_FAIL in caso di errore.
      */
-    public ANSWER_CODE moveCard(String projectTitle, String cardTitle, String fromListTitle, String toListTitle) {
-        return ANSWER_CODE.OP_FAIL;
+    public ANSWER_CODE moveCard(String projectTitle, String cardTitle, String fromListTitle, String toListTitle, String userNickname) {
+        if(isNull(projectTitle,cardTitle,fromListTitle,toListTitle,userNickname))
+            return ANSWER_CODE.OP_FAIL;
+        if(findUserByNickname(userNickname) == null)
+            return ANSWER_CODE.UNKNOWN_USER;
+
+        Project prj = findProjectByTitle(projectTitle);
+        if(prj != null)
+            return prj.moveCard(cardTitle,fromListTitle,toListTitle,userNickname);
+        return ANSWER_CODE.UNKNOWN_PROJECT;
     }
 
     /*
@@ -240,7 +274,7 @@ public class Server {
      * EFFECTS:
      * RETURN: Restituisce la history della card in caso non ci siano problemi, null altrimenti.
      */
-    public CardHistory getCardHistory(String projectTitle, String cardTitle) {
+    public CardHistory getCardHistory(String projectTitle, String cardTitle, String userNickname) {
         return null;
     }
 
@@ -249,7 +283,7 @@ public class Server {
      * RETURN: La chat del progetto, null in caso di errore.
      */
     // TODO: 13/01/21 Restituire la chat
-    public String readChat(String projectTitle) {
+    public String readChat(String projectTitle, String userNickname) {
         return null;
     }
 
@@ -261,7 +295,7 @@ public class Server {
      * 			|| PERMISSION_DENIED se l'utente non è registrato al progetto,
      * 			|| OP_FAIL in caso di errore.
      */
-    public ANSWER_CODE sendChatMsg(String projectTitle, String message) {
+    public ANSWER_CODE sendChatMsg(String projectTitle, String message, String userNickname) {
         return ANSWER_CODE.OP_FAIL;
     }
 
@@ -274,7 +308,7 @@ public class Server {
      * 			|| PROJECT_NOT_FINISHED se esiste almeno una card non nella lista DONE
      * 			|| OP_FAIL in caso di errore.
      */
-    public ANSWER_CODE cancelProject(String projectTitle) {
+    public ANSWER_CODE cancelProject(String projectTitle, String userNickname) {
         return ANSWER_CODE.OP_FAIL;
     }
 
@@ -295,5 +329,13 @@ public class Server {
                 return prj;
         }
         return null;
+    }
+
+    private boolean isNull(String ...strings){
+        for (String str : strings) {
+            if(str == null)
+                return true;
+        }
+        return false;
     }
 }

@@ -2,6 +2,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Project {
+    public static final String UTENTE_ERRATO = "Utente non membro del progetto.";
     private String projectTitle;
     private List<Card> todoList, inProgresList, toBeRevisedList, doneList;
     private List<String> projectUsers;
@@ -26,8 +27,10 @@ public class Project {
         return projectTitle;
     }
 
-    public String getProjectUsers() {
-        return projectUsers.toString();
+    public String getProjectUsers(String userNickname) {
+        if(isUserRegisteredToProject(userNickname))
+            return projectUsers.toString();
+        return UTENTE_ERRATO;
     }
 // ------ Setters -------
 
@@ -65,23 +68,25 @@ public class Project {
      * 			|| PERMISSION_DENIED se l'utente non è registrato al progetto,
      * 			|| OP_FAIL in caso di altro errore.
      * */
-    public ANSWER_CODE moveCard(String cardTitle, CARD_STATUS fromListTitle, CARD_STATUS toListTitle, String userNickname) {
-        if (!checkStep(fromListTitle, toListTitle))
+    public ANSWER_CODE moveCard(String cardTitle, String fromListTitle, String toListTitle, String userNickname) {
+        CARD_STATUS fromStatus = getStatus(fromListTitle);
+        CARD_STATUS toStatus = getStatus(toListTitle);
+        if (!checkStep(fromStatus,toStatus))
             return ANSWER_CODE.WRONG_LIST;
         else if (!isUserRegisteredToProject(userNickname))
             return ANSWER_CODE.PERMISSION_DENIED;
         else { // Se supera i controlli cerco la card nella lista.
-            Card card = findCardInList(cardTitle, fromListTitle); // In teoria potrebbe trovare la card nella lista DONE, questo non è possibile grazie al controllo sugli step.
+            Card card = findCardInList(cardTitle, fromStatus); // In teoria potrebbe trovare la card nella lista DONE, questo non è possibile grazie al controllo sugli step.
             if (card == null) {
                 return ANSWER_CODE.UNKNOWN_CARD;
             }
 
-            if(getList(fromListTitle).remove(card)){ // Se è rimossa dalla lista e aggiunta alla lista successiva.
-                 if(getList(toListTitle).add(card)){
-                     return card.moveAndAdjournHistory(userNickname, toListTitle); // Provo ad aggiornare la Card e ritorno.
+            if(getList(fromStatus).remove(card)){ // Se è rimossa dalla lista e aggiunta alla lista successiva.
+                 if(getList(toStatus).add(card)){
+                     return card.moveAndAdjournHistory(userNickname, toStatus); // Provo ad aggiornare la Card e ritorno.
                  }
                  else{ // In caso non sia riuscito ad aggiungerla alla lista successiva provo a ripristinare tutto.
-                     getList(fromListTitle).add(card);
+                     getList(fromStatus).add(card);
                      return ANSWER_CODE.OP_FAIL;
                  }
             }
@@ -89,15 +94,6 @@ public class Project {
                 return ANSWER_CODE.OP_FAIL;
         }
     }
-
-    /*
-     * EFFECTS: Controlla se l'utente è registrato al progetto.
-     * RETURN: true se lo è, false altrimenti.
-     */
-    public boolean isUserRegisteredToProject(String userNickname) {
-        return projectUsers.contains(userNickname);
-    }
-
 
     /*
      * REQUIRES: String != null
@@ -131,16 +127,35 @@ public class Project {
      * EFFECTS: Crea una stringa con il titolo di ogni card in ogni lista e gli utenti del progetto.
      * RETURN: La stringa creata.
      */
-    public String prettyPrint() {
-        return "Project{" +
-                "projectTitle='" + projectTitle + '\'' +
-                ",\n Todo=" + todoList +
-                ",\n In Progres=" + inProgresList +
-                ",\n To Be Revised=" + toBeRevisedList +
-                ",\n Done=" + doneList +
-                ",\n Project Users=" + projectUsers +
-                '}';
+    // TODO: 14/01/21 se non registrato non dovrebbe vedere la lista degli utenti
+    public String prettyPrint(String userNickname) {
+        return showCards(userNickname) +
+                ",\n Utenti Registrati: " + projectUsers;
     }
+
+    public String showCards(String userNickname) {
+        if(isUserRegisteredToProject(userNickname)){
+        return "Progetto: " + projectTitle +
+                ",\n Todo: " + todoList.toString() +
+                ",\n In Progres: " + inProgresList.toString() +
+                ",\n To Be Revised: " + toBeRevisedList.toString() +
+                ",\n Done: " + doneList.toString();
+        }
+        return UTENTE_ERRATO;
+    }
+
+    /*
+     * REQUIRES:
+     * EFFECTS:
+     * RETURN:
+     */
+    // TODO: 14/01/21 passare una copia? una stringa?
+    public Card getCard(String cardTitle, String cardStatus, String userNickname) {
+        if(isUserRegisteredToProject(userNickname))
+            return findCardInList(cardTitle, getStatus(cardStatus));
+        return null;
+    }
+
 
 //    ------- Private Methods --------
 
@@ -159,10 +174,6 @@ public class Project {
             return false;
     }
 
-
-
-
-
     /*
      * REQUIRES: @params != null
      * EFFECTS: Cerca la card nella lista.
@@ -179,7 +190,6 @@ public class Project {
         }
         return null;
     }
-
 
     /*
      * RETURN: La lista relativa al titolo della lista.
@@ -206,4 +216,26 @@ public class Project {
         return selectedList;
     }
 
+    private CARD_STATUS getStatus(String cardStatus) {
+        switch (cardStatus){
+            case "TODO":
+                return CARD_STATUS.TODO;
+            case "INPROGRESS":
+                return CARD_STATUS.IN_PROGRESS;
+            case "TOBEREVISED":
+                return CARD_STATUS.TO_BE_REVISED;
+            case "DONE":
+                return CARD_STATUS.DONE;
+            default:
+                return null;
+        }
+    }
+
+    /*
+     * EFFECTS: Controlla se l'utente è registrato al progetto.
+     * RETURN: true se lo è, false altrimenti.
+     */
+    private boolean isUserRegisteredToProject(String userNickname) {
+        return projectUsers.contains(userNickname);
+    }
 }

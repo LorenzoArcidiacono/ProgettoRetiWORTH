@@ -1,4 +1,7 @@
 public class MainTest {
+
+    public static final String PROGETTO = "Progetto 1";
+
     public static void main(String[] args) {
         Server server = new Server();
 
@@ -16,12 +19,23 @@ public class MainTest {
         System.out.println(server.listOnlineUsers());
 
         //Provo progetto
-        System.out.println(server.createProject("Progetto 1", "Pluto"));
+        System.out.println(server.createProject(PROGETTO, "Pluto"));
         System.out.println(server.showMembers("Progetto 1","Pluto"));
         System.out.println(server.showMembers("Progetto 1","Pippo"));
 
         System.out.println(server.addMember("Progetto 1","Pluto","Pippo"));
         System.out.println(server.showMembers("Progetto 1","Pippo"));
+        System.out.println(server.showCards("Progetto 1", "Pippo"));
+        server.addCard(PROGETTO,"Sommare","Sommare tutti i valori","Pippo");
+        System.out.println(server.showCards(PROGETTO,"Pippo"));
+        Card crd = server.showCard(PROGETTO,"Sommare","TODO","Pippo");
+        crd = null;
+        System.out.println(server.showCards(PROGETTO,"Pippo"));
+        server.moveCard(PROGETTO,"Sommare","TODO","INPROGRESS","Pluto");
+        System.out.println(server.showCards(PROGETTO,"Pippo"));
+        System.out.println(
+                server.showCard(PROGETTO,"Sommare","INPROGRESS","Pippo")
+                .getCardHistory());
     }
 
 
