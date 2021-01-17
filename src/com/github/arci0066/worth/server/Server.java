@@ -5,7 +5,7 @@ import com.github.arci0066.worth.enumeration.ANSWER_CODE;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Server implements ServerInterface {
+public class Server {
     private List<Project> projectsList;
     private List<User> registeredUsersList;
 
@@ -18,7 +18,7 @@ public class Server implements ServerInterface {
 
 
 // ------ Methods --------
-
+// TODO: 17/01/21 Mancano controlli se utente è online
     /*
      * REQUIRES: Strings != null
      * EFFECTS: Registra un utente se il nickname non è già in uso, nel caso di esito positivo l'utente viene messo online
@@ -26,7 +26,6 @@ public class Server implements ServerInterface {
      *			|| EXISTING_USER se il nickname è già registrato
      *			|| OP_FAIL in caso di errore
      */
-    @Override
     public ANSWER_CODE register(String userNickname, String userPassword) {
         if (userNickname == null || userPassword == null)
             return ANSWER_CODE.OP_FAIL;
@@ -45,7 +44,6 @@ public class Server implements ServerInterface {
      *			|| WRONG_PASSWORD se la password è sbagliata
      *			|| OP_FAIL in caso di errore
      */
-    @Override
     public ANSWER_CODE login(String userNickname, String userPassword) {
         if (isNull(userNickname,userPassword)) {
             return ANSWER_CODE.OP_FAIL;
@@ -69,7 +67,6 @@ public class Server implements ServerInterface {
      * REQUIRES: String != null
      * EFFECTS: Se il nickname è registrato e online viene settato com offline,
      */
-    @Override
     public void logout(String userNickname) {
         User usr = findUserByNickname(userNickname);
         if (usr.isOnline()) {
@@ -84,7 +81,6 @@ public class Server implements ServerInterface {
      * RETURN: Una stringa contenente i nickname degli utenti registrati
      */
     //Meglio se restituisse una List? No lui non deve manipolare nulla
-    @Override
     public String listUsers() {
         String str = "Utenti Registrati:{ ";
         for (User usr : registeredUsersList) {
@@ -100,7 +96,6 @@ public class Server implements ServerInterface {
      * RETURN: Una stringa contenente i nickname degli utenti online
      */
     //Meglio se restituisse una List? No lui non deve manipolare nulla
-    @Override
     public String listOnlineUsers() {
         String str = "Utenti Online:{ ";
         for (User usr : registeredUsersList) {
@@ -118,7 +113,6 @@ public class Server implements ServerInterface {
      * RETURN: Una stringa contenente i nomi dei progetti
      */
     //Meglio se restituisse una List?
-    @Override
     public String listProjects() {
         String str = "Progetti:{";
         for (Project prj : projectsList ) {
@@ -137,7 +131,6 @@ public class Server implements ServerInterface {
      *			|| EXISTING_PROJECT se il titolo è già in uso.
      *			|| OP_FAIL altrimenti.
      */
-    @Override
     public ANSWER_CODE createProject(String projectTitle, String userNickname) {
         //Controllo Parametri
         if(isNull(projectTitle,userNickname)){
@@ -160,15 +153,15 @@ public class Server implements ServerInterface {
      * RETURN: OP_OK in caso non ci siano stati errori
      *			|| UNKNOWN_PROJECT se projectTitle non è registrato
      *			|| UNKNOWN_USER se userNickname non corrisponde a un utente
+     *          || PERMISSION_DENIED se l'utente oldUserNickname non è registrato al progetto
      *			|| OP_FAIL altrimenti.
      */
-    @Override
     public ANSWER_CODE addMember(String projectTitle, String oldUserNickname, String newUserNickname) {
         if(isNull(projectTitle,oldUserNickname,newUserNickname)){
             return ANSWER_CODE.OP_FAIL;
         }
         if( findUserByNickname(newUserNickname) == null || findUserByNickname(oldUserNickname) == null)  {
-            return ANSWER_CODE.EXISTING_USER;
+            return ANSWER_CODE.UNKNOWN_USER;
         }
 
         Project prj = findProjectByTitle(projectTitle);
@@ -185,7 +178,6 @@ public class Server implements ServerInterface {
      * RETURN: Una stringa contenente i nickname degli utenti registrati
      */
     //Meglio se restituisse una List?
-    @Override
     public String showMembers(String projectTitle, String userNickname) {
         if(isNull(projectTitle,userNickname)){
             return "Errore nella richiesta.";
@@ -206,7 +198,6 @@ public class Server implements ServerInterface {
      * EFFECTS: Restituisce la lista delle com.github.arci0066.worth.extra.Card del progetto
      * RETURN: Una stringa contenente i titoli delle card divisi per status
      */
-    @Override
     public String showCards(String projectTitle, String userNickname) {
         if(isNull(projectTitle,userNickname)){
             return "Errore nella richiesta.";
@@ -228,7 +219,6 @@ public class Server implements ServerInterface {
      * EFFECTS: Restituisce la card corrispondente a cardTitle in pojectTitle se questa esiste
      * RETURN: Una copia della card corrispondente se esiste, null altrimenti.
      */
-    @Override
     public Card showCard(String projectTitle, String cardTitle, String cardStatus, String userNickname) {
         if(isNull(projectTitle,cardTitle,userNickname)){
             return null;
@@ -247,10 +237,10 @@ public class Server implements ServerInterface {
      * EFFECTS: Aggiunge una nuova card alla lista TODO del progetto
      * RETURN: OP_OK se op. a buon fine
      * 			|| UNKNOWN_PROJECT se il progetto non è registrato,
+     *          || UNKNOWN_USER se l'utente non è registrato,
      * 			|| PERMISSION_DENIED se l'utente non è registrato al progetto,
      * 			|| OP_FAIL in caso di errore.
      */
-    @Override
     public ANSWER_CODE addCard(String projectTitle, String cardTitle, String cardDescription, String userNickname) {
         if(isNull(projectTitle,cardTitle,cardDescription,userNickname))
             return ANSWER_CODE.OP_FAIL;
@@ -269,11 +259,11 @@ public class Server implements ServerInterface {
      * RETURN: OP_OK se op. a buon fine,
      * 			|| UNKNOWN_PROJECT se il progetto non è registrato,
      * 			|| UNKNOWN_CARD se la card non esiste nel progetto,
+     *          || UNKNOWN_USER se l'utente non è registrato,
      *			|| WRONG_LIST se il titolo della lista è sbagliato o se lo spostamento non segue il flusso di lavoro,
      * 			|| PERMISSION_DENIED se l'utente non è registrato al progetto,
      * 			|| OP_FAIL in caso di errore.
      */
-    @Override
     public ANSWER_CODE moveCard(String projectTitle, String cardTitle, String fromListTitle, String toListTitle, String userNickname) {
         if(isNull(projectTitle,cardTitle,fromListTitle,toListTitle,userNickname))
             return ANSWER_CODE.OP_FAIL;
@@ -291,7 +281,6 @@ public class Server implements ServerInterface {
      * EFFECTS:
      * RETURN: Restituisce la history della card in caso non ci siano problemi, null altrimenti.
      */
-    @Override
     public String getCardHistory(String projectTitle, String cardTitle, String cardStatus, String userNickname) {
         if(isNull(projectTitle,cardTitle,cardStatus,userNickname)){
             return null;
@@ -313,7 +302,6 @@ public class Server implements ServerInterface {
      * RETURN: La chat del progetto, null in caso di errore.
      */
     // TODO: 13/01/21 Restituire la chat
-    @Override
     public String readChat(String projectTitle, String userNickname) {
         return null;
     }
@@ -326,7 +314,6 @@ public class Server implements ServerInterface {
      * 			|| PERMISSION_DENIED se l'utente non è registrato al progetto,
      * 			|| OP_FAIL in caso di errore.
      */
-    @Override
     public ANSWER_CODE sendChatMsg(String projectTitle, String message, String userNickname) {
         return ANSWER_CODE.OP_FAIL;
     }
@@ -340,7 +327,6 @@ public class Server implements ServerInterface {
      * 			|| PROJECT_NOT_FINISHED se esiste almeno una card non nella lista DONE
      * 			|| OP_FAIL in caso di errore.
      */
-    @Override
     public ANSWER_CODE cancelProject(String projectTitle, String userNickname) {
         if(isNull(projectTitle,userNickname))
             return ANSWER_CODE.OP_FAIL;

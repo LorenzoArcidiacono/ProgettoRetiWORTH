@@ -5,7 +5,7 @@ import com.github.arci0066.worth.enumeration.*;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Project implements ProjectInterface {
+public class Project {
     private static final String UTENTE_ERRATO = "Utente non membro del progetto.";
     private String projectTitle;
     private List<Card> todoList, inProgresList, toBeRevisedList, doneList;
@@ -27,12 +27,10 @@ public class Project implements ProjectInterface {
     }
 
     // ------ Getters -------
-    @Override
     public String getProjectTitle() {
         return projectTitle;
     }
 
-    @Override
     public String getProjectUsers(String userNickname) {
         if(isUserRegisteredToProject(userNickname))
             return projectUsers.toString();
@@ -49,7 +47,6 @@ public class Project implements ProjectInterface {
      * 			|| PERMISSION_DENIED se l'utente non è registrato al progetto
      * 			|| OP_FAIL in caso di errore.
      */
-    @Override
     public ANSWER_CODE addCard(String cardTitle, String cardDescription, String userNickname) {
         if(!isUserRegisteredToProject(userNickname))
             return ANSWER_CODE.PERMISSION_DENIED;
@@ -75,7 +72,6 @@ public class Project implements ProjectInterface {
      * 			|| PERMISSION_DENIED se l'utente non è registrato al progetto,
      * 			|| OP_FAIL in caso di altro errore.
      * */
-    @Override
     public ANSWER_CODE moveCard(String cardTitle, String fromListTitle, String toListTitle, String userNickname) {
         CARD_STATUS fromStatus = getStatus(fromListTitle);
         CARD_STATUS toStatus = getStatus(toListTitle);
@@ -115,7 +111,6 @@ public class Project implements ProjectInterface {
      *			|| PERMISSION_DENIED se l'utente oldUserNickname non è registrato al progetto,
      *			|| OP_FAIL altrimenti.
      */
-    @Override
     public ANSWER_CODE addUser(String oldUserNickname, String newUserNickname) {
         if (!isUserRegisteredToProject(oldUserNickname))
             return ANSWER_CODE.PERMISSION_DENIED;
@@ -130,7 +125,6 @@ public class Project implements ProjectInterface {
     }
 
     // TODO: 12/01/21 implementare
-    @Override
     public ANSWER_CODE cancelProject(String userNickname){
         if (!isUserRegisteredToProject(userNickname))
             return ANSWER_CODE.PERMISSION_DENIED;
@@ -151,13 +145,11 @@ public class Project implements ProjectInterface {
      * RETURN: La stringa creata.
      */
     // TODO: 14/01/21 se non registrato non dovrebbe vedere la lista degli utenti
-    @Override
     public String prettyPrint(String userNickname) {
         return showCards(userNickname) +
                 ",\n Utenti Registrati: " + projectUsers;
     }
 
-    @Override
     public String showCards(String userNickname) {
         if(isUserRegisteredToProject(userNickname)){
         return "Progetto: " + projectTitle +
@@ -175,14 +167,12 @@ public class Project implements ProjectInterface {
      * RETURN:
      */
     // TODO: 14/01/21 passare una copia? una stringa?
-    @Override
     public Card getCard(String cardTitle, String cardStatus, String userNickname) {
         if(isUserRegisteredToProject(userNickname))
             return findCardInList(cardTitle, getStatus(cardStatus));
         return null;
     }
 
-    @Override
     public String getCardHistory(String cardTitle, String cardStatus, String userNickname) {
         return getCard(cardTitle,cardStatus,userNickname).getCardHistory();
     }
