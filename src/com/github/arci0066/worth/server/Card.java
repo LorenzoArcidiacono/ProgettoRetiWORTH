@@ -1,5 +1,9 @@
+package com.github.arci0066.worth.server;
 
-public class Card {
+import com.github.arci0066.worth.enumeration.ANSWER_CODE;
+import com.github.arci0066.worth.enumeration.CARD_STATUS;
+
+public class Card implements CardInterface {
     private String cardTitle;
     private String cardDescription;
     private CARD_STATUS cardStatus;
@@ -8,7 +12,7 @@ public class Card {
     private CardHistory cardHistory;
 
 
-//    -------- Constructors -------
+    //    -------- Constructors -------
     public Card(String cardTitle, String cardDescription, String nickname) {
         this.cardTitle = cardTitle;
         this.cardDescription = cardDescription;
@@ -16,34 +20,46 @@ public class Card {
         cardStatus = CARD_STATUS.TODO;
     }
 
-//    ---------- Getters -------------
+    //    ---------- Getters -------------
+    @Override
     public String getCardTitle() {
         return cardTitle;
     }
 
+    @Override
     public String getCardDescription() {
         return cardDescription;
     }
 
+    @Override
     public CARD_STATUS getCardStatus() {
         return cardStatus;
     }
 
+    @Override
     public String getCardHistory() {
         return cardHistory.toString();
     }
 
-//    ----------- Methods ------------
+    //    ----------- Methods ------------
+    @Override
     public ANSWER_CODE changeStatus(CARD_STATUS newCardStatus) {
         return null;
     }
 
+    @Override
     public ANSWER_CODE moveAndAdjournHistory(String userNickname, CARD_STATUS newCardStatus) {
 //TODO       Se il nuovo stato non è compatibile ritorno errore (dovrebbe controllarlo il progetto)
 // TODO: 14/01/21 dovrei aggiornare dopo lo status
         CARD_STATUS oldCardStatus = cardStatus;
         cardStatus = newCardStatus;
-        return cardHistory.add(userNickname,oldCardStatus,newCardStatus);
+        return cardHistory.add(userNickname, oldCardStatus, newCardStatus);
+    }
+
+    @Override
+    public void empty() {
+        cardHistory.empty();
+        cardHistory = null;
     }
 
     @Override

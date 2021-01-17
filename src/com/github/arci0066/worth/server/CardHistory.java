@@ -1,3 +1,8 @@
+package com.github.arci0066.worth.server;
+
+import com.github.arci0066.worth.enumeration.ANSWER_CODE;
+import com.github.arci0066.worth.enumeration.CARD_STATUS;
+
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -30,6 +35,14 @@ public class CardHistory {
         return "CardHistory{" +
                 events +
                 '}';
+    }
+
+    public void empty() {
+        events.clear();
+        events = null;
+
+        formatter = null;
+        date = null;
     }
 }
 

@@ -1,4 +1,6 @@
-import java.util.List;
+package com.github.arci0066.worth.server;
+
+import com.github.arci0066.worth.enumeration.USER_STATUS;
 
 public class User {
     String nickname, password;
@@ -39,7 +41,7 @@ public class User {
 
     @Override
     public String toString() {
-        return "User{" +
+        return "com.github.arci0066.worth.User{" +
                 "nickname='" + nickname + '\'' +
                 ": " + userStatus +
                 '}';

@@ -1,8 +1,12 @@
+package com.github.arci0066.worth.server;
+
+import com.github.arci0066.worth.enumeration.*;
+
 import java.util.ArrayList;
 import java.util.List;
 
-public class Project {
-    public static final String UTENTE_ERRATO = "Utente non membro del progetto.";
+public class Project implements ProjectInterface {
+    private static final String UTENTE_ERRATO = "Utente non membro del progetto.";
     private String projectTitle;
     private List<Card> todoList, inProgresList, toBeRevisedList, doneList;
     private List<String> projectUsers;
@@ -23,10 +27,12 @@ public class Project {
     }
 
     // ------ Getters -------
+    @Override
     public String getProjectTitle() {
         return projectTitle;
     }
 
+    @Override
     public String getProjectUsers(String userNickname) {
         if(isUserRegisteredToProject(userNickname))
             return projectUsers.toString();
@@ -43,6 +49,7 @@ public class Project {
      * 			|| PERMISSION_DENIED se l'utente non è registrato al progetto
      * 			|| OP_FAIL in caso di errore.
      */
+    @Override
     public ANSWER_CODE addCard(String cardTitle, String cardDescription, String userNickname) {
         if(!isUserRegisteredToProject(userNickname))
             return ANSWER_CODE.PERMISSION_DENIED;
@@ -68,6 +75,7 @@ public class Project {
      * 			|| PERMISSION_DENIED se l'utente non è registrato al progetto,
      * 			|| OP_FAIL in caso di altro errore.
      * */
+    @Override
     public ANSWER_CODE moveCard(String cardTitle, String fromListTitle, String toListTitle, String userNickname) {
         CARD_STATUS fromStatus = getStatus(fromListTitle);
         CARD_STATUS toStatus = getStatus(toListTitle);
@@ -97,8 +105,8 @@ public class Project {
 
     /*
      * REQUIRES: String != null
-     *  && userNickname di un utente registrato (Controllato dal Server)
-     *  && projectTitle di un progetto esistente  (Controllato dal Server)
+     *  && userNickname di un utente registrato (Controllato dal com.github.arci0066.worth.Server)
+     *  && projectTitle di un progetto esistente  (Controllato dal com.github.arci0066.worth.Server)
      *  && user registrato al progetto.
      *
      * EFFECTS: Aggiunge l'utente alla lista degli utenti del progetto.
@@ -107,6 +115,7 @@ public class Project {
      *			|| PERMISSION_DENIED se l'utente oldUserNickname non è registrato al progetto,
      *			|| OP_FAIL altrimenti.
      */
+    @Override
     public ANSWER_CODE addUser(String oldUserNickname, String newUserNickname) {
         if (!isUserRegisteredToProject(oldUserNickname))
             return ANSWER_CODE.PERMISSION_DENIED;
@@ -121,18 +130,34 @@ public class Project {
     }
 
     // TODO: 12/01/21 implementare
-    public ANSWER_CODE cancelProject(){ return ANSWER_CODE.OP_FAIL; }
+    @Override
+    public ANSWER_CODE cancelProject(String userNickname){
+        if (!isUserRegisteredToProject(userNickname))
+            return ANSWER_CODE.PERMISSION_DENIED;
+
+        projectTitle = null;
+        emptyList(todoList);
+        emptyList(inProgresList);
+        emptyList(toBeRevisedList);
+        emptyList(doneList);
+        projectUsers.clear();
+        projectUsers = null;
+        return ANSWER_CODE.OP_OK;
+    }
+
 
     /*
      * EFFECTS: Crea una stringa con il titolo di ogni card in ogni lista e gli utenti del progetto.
      * RETURN: La stringa creata.
      */
     // TODO: 14/01/21 se non registrato non dovrebbe vedere la lista degli utenti
+    @Override
     public String prettyPrint(String userNickname) {
         return showCards(userNickname) +
                 ",\n Utenti Registrati: " + projectUsers;
     }
 
+    @Override
     public String showCards(String userNickname) {
         if(isUserRegisteredToProject(userNickname)){
         return "Progetto: " + projectTitle +
@@ -150,13 +175,17 @@ public class Project {
      * RETURN:
      */
     // TODO: 14/01/21 passare una copia? una stringa?
+    @Override
     public Card getCard(String cardTitle, String cardStatus, String userNickname) {
         if(isUserRegisteredToProject(userNickname))
             return findCardInList(cardTitle, getStatus(cardStatus));
         return null;
     }
 
-
+    @Override
+    public String getCardHistory(String cardTitle, String cardStatus, String userNickname) {
+        return getCard(cardTitle,cardStatus,userNickname).getCardHistory();
+    }
 //    ------- Private Methods --------
 
     /*
@@ -238,4 +267,12 @@ public class Project {
     private boolean isUserRegisteredToProject(String userNickname) {
         return projectUsers.contains(userNickname);
     }
+
+    private void emptyList(List<Card> cardList) {
+        for (Card card : cardList) {
+            card.empty();
+        }
+        cardList.clear();
+    }
+
 }

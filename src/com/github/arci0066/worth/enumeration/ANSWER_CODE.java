@@ -1,3 +1,6 @@
+package com.github.arci0066.worth.enumeration;
+
+
 public enum ANSWER_CODE {
     OP_OK,
     OP_FAIL,

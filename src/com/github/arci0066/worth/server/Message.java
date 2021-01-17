@@ -1,3 +1,6 @@
+package com.github.arci0066.worth.server;
+import com.github.arci0066.worth.enumeration.OP_CODE;
+
 public class Message {
     private String senderNickname, senderPassword;
     private OP_CODE operationCode;
