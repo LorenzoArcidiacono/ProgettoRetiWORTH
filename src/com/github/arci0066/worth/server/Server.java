@@ -10,14 +10,14 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class Server implements ServerInterface {
     private ProjectsList projectsList;
-    private List<User> registeredUsersList;
+    private UsersList registeredUsersList;
 
 
 // ------ Constructors ------
 
     public Server() {
         projectsList = ProjectsList.getSingletonInstance();
-        registeredUsersList = new ArrayList<>();
+        registeredUsersList = UsersList.getSingletonInstance();
     }
 
 
@@ -90,12 +90,7 @@ public class Server implements ServerInterface {
     //Meglio se restituisse una List? No lui non deve manipolare nulla
     @Override
     public String listUsers() {
-        String str = "Utenti Registrati:{ ";
-        for (User usr : registeredUsersList) {
-            str += "\n* " + usr.getNickname();
-        }
-        str += "\n}";
-        return str;
+        return registeredUsersList.getUsersNickname();
     }
 
     /*
@@ -105,14 +100,7 @@ public class Server implements ServerInterface {
      */
     //Meglio se restituisse una List? No lui non deve manipolare nulla
     public String listOnlineUsers() {
-        String str = "Utenti Online:{ ";
-        for (User usr : registeredUsersList) {
-            if (usr.isOnline()) {
-                str += "\n* " + usr.getNickname();
-            }
-        }
-        str += "\n}";
-        return str;
+        return registeredUsersList.getOnlineUsersNickname();
     }
 
 
@@ -363,12 +351,7 @@ public class Server implements ServerInterface {
 // ----- Private Methods -------
 
     private User findUserByNickname(String userNickname) {
-        for (User user : registeredUsersList) {
-            if (userNickname.equals(user.getNickname())) {
-                return user;
-            }
-        }
-        return null;
+        return registeredUsersList.findUser(userNickname);
     }
 
     private Project findProjectByTitle(String projectTitle) {
