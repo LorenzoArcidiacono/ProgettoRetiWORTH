@@ -1,23 +1,27 @@
 package com.github.arci0066.worth.server;
 
 import com.github.arci0066.worth.enumeration.ANSWER_CODE;
+import com.github.arci0066.worth.interfaces.ServerInterface;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-public class Server {
-    private List<Project> projectsList;
+public class Server implements ServerInterface {
+    private ProjectsList projectsList;
     private List<User> registeredUsersList;
+
 
 // ------ Constructors ------
 
     public Server() {
-        projectsList = new ArrayList<>();
+        projectsList = ProjectsList.getSingletonInstance();
         registeredUsersList = new ArrayList<>();
     }
 
 
-// ------ Methods --------
+    // ------ Methods --------
 // TODO: 17/01/21 Mancano controlli se utente è online
     /*
      * REQUIRES: Strings != null
@@ -26,6 +30,7 @@ public class Server {
      *			|| EXISTING_USER se il nickname è già registrato
      *			|| OP_FAIL in caso di errore
      */
+    @Override
     public ANSWER_CODE register(String userNickname, String userPassword) {
         if (userNickname == null || userPassword == null)
             return ANSWER_CODE.OP_FAIL;
@@ -44,8 +49,9 @@ public class Server {
      *			|| WRONG_PASSWORD se la password è sbagliata
      *			|| OP_FAIL in caso di errore
      */
+    @Override
     public ANSWER_CODE login(String userNickname, String userPassword) {
-        if (isNull(userNickname,userPassword)) {
+        if (isNull(userNickname, userPassword)) {
             return ANSWER_CODE.OP_FAIL;
         }
 
@@ -67,6 +73,7 @@ public class Server {
      * REQUIRES: String != null
      * EFFECTS: Se il nickname è registrato e online viene settato com offline,
      */
+    @Override
     public void logout(String userNickname) {
         User usr = findUserByNickname(userNickname);
         if (usr.isOnline()) {
@@ -81,6 +88,7 @@ public class Server {
      * RETURN: Una stringa contenente i nickname degli utenti registrati
      */
     //Meglio se restituisse una List? No lui non deve manipolare nulla
+    @Override
     public String listUsers() {
         String str = "Utenti Registrati:{ ";
         for (User usr : registeredUsersList) {
@@ -113,12 +121,9 @@ public class Server {
      * RETURN: Una stringa contenente i nomi dei progetti
      */
     //Meglio se restituisse una List?
+    @Override
     public String listProjects() {
-        String str = "Progetti:{";
-        for (Project prj : projectsList ) {
-            str += "\n* " + prj.getProjectTitle();
-        }
-        return str + "\n}";
+        return projectsList.getProjectsTitle();
     }
 
     /*
@@ -131,19 +136,20 @@ public class Server {
      *			|| EXISTING_PROJECT se il titolo è già in uso.
      *			|| OP_FAIL altrimenti.
      */
+    @Override
     public ANSWER_CODE createProject(String projectTitle, String userNickname) {
         //Controllo Parametri
-        if(isNull(projectTitle,userNickname)){
+        if (isNull(projectTitle, userNickname)) {
             return ANSWER_CODE.OP_FAIL;
         }
-        if( findUserByNickname(userNickname) == null ) {
+        if (findUserByNickname(userNickname) == null) {
             return ANSWER_CODE.UNKNOWN_USER;
         }
-        if(findProjectByTitle(projectTitle) != null){
+        if (findProjectByTitle(projectTitle) != null) {
             return ANSWER_CODE.EXISTING_PROJECT;
         }
 
-        projectsList.add(new Project(projectTitle,userNickname));
+        projectsList.add(new Project(projectTitle, userNickname));
         return ANSWER_CODE.OP_OK;
     }
 
@@ -156,19 +162,19 @@ public class Server {
      *          || PERMISSION_DENIED se l'utente oldUserNickname non è registrato al progetto
      *			|| OP_FAIL altrimenti.
      */
+    @Override
     public ANSWER_CODE addMember(String projectTitle, String oldUserNickname, String newUserNickname) {
-        if(isNull(projectTitle,oldUserNickname,newUserNickname)){
+        if (isNull(projectTitle, oldUserNickname, newUserNickname)) {
             return ANSWER_CODE.OP_FAIL;
         }
-        if( findUserByNickname(newUserNickname) == null || findUserByNickname(oldUserNickname) == null)  {
+        if (findUserByNickname(newUserNickname) == null || findUserByNickname(oldUserNickname) == null) {
             return ANSWER_CODE.UNKNOWN_USER;
         }
 
         Project prj = findProjectByTitle(projectTitle);
-        if(prj == null){
+        if (prj == null) {
             return ANSWER_CODE.UNKNOWN_PROJECT;
         }
-
         return prj.addUser(oldUserNickname, newUserNickname);
     }
 
@@ -178,18 +184,21 @@ public class Server {
      * RETURN: Una stringa contenente i nickname degli utenti registrati
      */
     //Meglio se restituisse una List?
+    @Override
     public String showMembers(String projectTitle, String userNickname) {
-        if(isNull(projectTitle,userNickname)){
+        if (isNull(projectTitle, userNickname)) {
             return "Errore nella richiesta.";
         }
-        if( findUserByNickname(userNickname) == null ) {
+        if (findUserByNickname(userNickname) == null) {
             return "L'utente non è registrato";
         }
 
+        //findProjectByTitle è thread safe
         Project prj = findProjectByTitle(projectTitle);
-        if(prj == null){
+        if (prj == null) {
             return "Progetto inesistente.";
         }
+        //se si bloccasse qui e qualcuno aggiungesse un User? devo bloccare il progetto?  è solo una copia?
         return prj.getProjectUsers(userNickname);
     }
 
@@ -198,16 +207,17 @@ public class Server {
      * EFFECTS: Restituisce la lista delle com.github.arci0066.worth.extra.Card del progetto
      * RETURN: Una stringa contenente i titoli delle card divisi per status
      */
+    @Override
     public String showCards(String projectTitle, String userNickname) {
-        if(isNull(projectTitle,userNickname)){
+        if (isNull(projectTitle, userNickname)) {
             return "Errore nella richiesta.";
         }
-        if( findUserByNickname(userNickname) == null ) {
+        if (findUserByNickname(userNickname) == null) {
             return "L'utente non è registrato";
         }
 
         Project prj = findProjectByTitle(projectTitle);
-        if(prj == null){
+        if (prj == null) {
             return "Progetto inesistente.";
         }
 
@@ -219,16 +229,17 @@ public class Server {
      * EFFECTS: Restituisce la card corrispondente a cardTitle in pojectTitle se questa esiste
      * RETURN: Una copia della card corrispondente se esiste, null altrimenti.
      */
+    @Override
     public Card showCard(String projectTitle, String cardTitle, String cardStatus, String userNickname) {
-        if(isNull(projectTitle,cardTitle,userNickname)){
+        if (isNull(projectTitle, cardTitle, userNickname)) {
             return null;
         }
-        if(findUserByNickname(userNickname)==null){
+        if (findUserByNickname(userNickname) == null) {
             return null;
         }
         Project prj = findProjectByTitle(projectTitle);
-        if(prj != null)
-            return prj.getCard(cardTitle, cardStatus ,userNickname);
+        if (prj != null)
+            return prj.getCard(cardTitle, cardStatus, userNickname);
         return null;
     }
 
@@ -241,15 +252,16 @@ public class Server {
      * 			|| PERMISSION_DENIED se l'utente non è registrato al progetto,
      * 			|| OP_FAIL in caso di errore.
      */
+    @Override
     public ANSWER_CODE addCard(String projectTitle, String cardTitle, String cardDescription, String userNickname) {
-        if(isNull(projectTitle,cardTitle,cardDescription,userNickname))
+        if (isNull(projectTitle, cardTitle, cardDescription, userNickname))
             return ANSWER_CODE.OP_FAIL;
-        if(findUserByNickname(userNickname) == null){
+        if (findUserByNickname(userNickname) == null) {
             return ANSWER_CODE.UNKNOWN_USER;
         }
         Project prj = findProjectByTitle(projectTitle);
-        if(prj != null)
-            return prj.addCard(cardTitle,cardDescription,userNickname);
+        if (prj != null)
+            return prj.addCard(cardTitle, cardDescription, userNickname);
         return ANSWER_CODE.UNKNOWN_PROJECT;
     }
 
@@ -264,15 +276,16 @@ public class Server {
      * 			|| PERMISSION_DENIED se l'utente non è registrato al progetto,
      * 			|| OP_FAIL in caso di errore.
      */
+    @Override
     public ANSWER_CODE moveCard(String projectTitle, String cardTitle, String fromListTitle, String toListTitle, String userNickname) {
-        if(isNull(projectTitle,cardTitle,fromListTitle,toListTitle,userNickname))
+        if (isNull(projectTitle, cardTitle, fromListTitle, toListTitle, userNickname))
             return ANSWER_CODE.OP_FAIL;
-        if(findUserByNickname(userNickname) == null)
+        if (findUserByNickname(userNickname) == null)
             return ANSWER_CODE.UNKNOWN_USER;
 
         Project prj = findProjectByTitle(projectTitle);
-        if(prj != null)
-            return prj.moveCard(cardTitle,fromListTitle,toListTitle,userNickname);
+        if (prj != null)
+            return prj.moveCard(cardTitle, fromListTitle, toListTitle, userNickname);
         return ANSWER_CODE.UNKNOWN_PROJECT;
     }
 
@@ -281,18 +294,19 @@ public class Server {
      * EFFECTS:
      * RETURN: Restituisce la history della card in caso non ci siano problemi, null altrimenti.
      */
+    @Override
     public String getCardHistory(String projectTitle, String cardTitle, String cardStatus, String userNickname) {
-        if(isNull(projectTitle,cardTitle,cardStatus,userNickname)){
+        if (isNull(projectTitle, cardTitle, cardStatus, userNickname)) {
             return null;
         }
 
-        if(findUserByNickname(userNickname) == null){
+        if (findUserByNickname(userNickname) == null) {
             return null;
         }
 
         Project prj = findProjectByTitle(projectTitle);
-        if(prj != null)
-            return prj.getCardHistory(cardTitle,cardStatus,userNickname);
+        if (prj != null)
+            return prj.getCardHistory(cardTitle, cardStatus, userNickname);
 
         return null;
     }
@@ -302,6 +316,7 @@ public class Server {
      * RETURN: La chat del progetto, null in caso di errore.
      */
     // TODO: 13/01/21 Restituire la chat
+    @Override
     public String readChat(String projectTitle, String userNickname) {
         return null;
     }
@@ -314,6 +329,7 @@ public class Server {
      * 			|| PERMISSION_DENIED se l'utente non è registrato al progetto,
      * 			|| OP_FAIL in caso di errore.
      */
+    @Override
     public ANSWER_CODE sendChatMsg(String projectTitle, String message, String userNickname) {
         return ANSWER_CODE.OP_FAIL;
     }
@@ -327,15 +343,16 @@ public class Server {
      * 			|| PROJECT_NOT_FINISHED se esiste almeno una card non nella lista DONE
      * 			|| OP_FAIL in caso di errore.
      */
+    @Override
     public ANSWER_CODE cancelProject(String projectTitle, String userNickname) {
-        if(isNull(projectTitle,userNickname))
+        if (isNull(projectTitle, userNickname))
             return ANSWER_CODE.OP_FAIL;
-        if(findUserByNickname(userNickname)==null){
+        if (findUserByNickname(userNickname) == null) {
             return ANSWER_CODE.UNKNOWN_USER;
         }
 
         Project prj = findProjectByTitle(projectTitle);
-        if(prj != null){
+        if (prj != null) {
             prj.cancelProject(userNickname);
             projectsList.remove(prj);
             return ANSWER_CODE.OP_OK;
@@ -355,16 +372,12 @@ public class Server {
     }
 
     private Project findProjectByTitle(String projectTitle) {
-        for (Project prj : projectsList) {
-            if (prj.getProjectTitle().equals(projectTitle))
-                return prj;
-        }
-        return null;
+        return projectsList.findProject(projectTitle);
     }
 
-    private boolean isNull(String ...strings){
+    private boolean isNull(String... strings) {
         for (String str : strings) {
-            if(str == null)
+            if (str == null)
                 return true;
         }
         return false;

@@ -4,12 +4,17 @@ import com.github.arci0066.worth.enumeration.*;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-public class Project {
+//CLASSE THREA SAFE
+public class Project implements com.github.arci0066.worth.interfaces.ProjectInterface {
     private static final String UTENTE_ERRATO = "Utente non membro del progetto.";
+
     private String projectTitle;
     private List<Card> todoList, inProgresList, toBeRevisedList, doneList;
     private List<String> projectUsers;
+    private ReadWriteLock lock;
 
     //Come la implemento?
     // TODO: 12/01/21  private Chat projectChat;
@@ -24,16 +29,34 @@ public class Project {
         toBeRevisedList = new ArrayList<>();
         doneList = new ArrayList<>();
         projectUsers.add(userNickname);
+        lock = new ReentrantReadWriteLock();
     }
 
     // ------ Getters -------
+    @Override
     public String getProjectTitle() {
-        return projectTitle;
+        String str;
+        lock.readLock().lock();
+        try {
+            str = projectTitle;
+        } finally {
+            lock.readLock().unlock();
+        }
+        return str;
     }
 
+    @Override
     public String getProjectUsers(String userNickname) {
-        if(isUserRegisteredToProject(userNickname))
-            return projectUsers.toString();
+        String str;
+        if (isUserRegisteredToProject(userNickname)) {
+            lock.readLock().lock();
+            try {
+                str = projectUsers.toString();
+            } finally {
+                lock.readLock().unlock();
+            }
+            return str;
+        }
         return UTENTE_ERRATO;
     }
 // ------ Setters -------
@@ -47,13 +70,18 @@ public class Project {
      * 			|| PERMISSION_DENIED se l'utente non è registrato al progetto
      * 			|| OP_FAIL in caso di errore.
      */
+    @Override
     public ANSWER_CODE addCard(String cardTitle, String cardDescription, String userNickname) {
-        if(!isUserRegisteredToProject(userNickname))
+        if (!isUserRegisteredToProject(userNickname))
             return ANSWER_CODE.PERMISSION_DENIED;
 
-        Card card = new Card(cardTitle,cardDescription,userNickname);
-        todoList.add(card);
-
+        Card card = new Card(cardTitle, cardDescription, userNickname);
+        lock.writeLock().lock();
+        try {
+            todoList.add(card);
+        } finally {
+            lock.writeLock().unlock();
+        }
         return ANSWER_CODE.OP_OK;
     }
 
@@ -72,31 +100,39 @@ public class Project {
      * 			|| PERMISSION_DENIED se l'utente non è registrato al progetto,
      * 			|| OP_FAIL in caso di altro errore.
      * */
+    @Override
     public ANSWER_CODE moveCard(String cardTitle, String fromListTitle, String toListTitle, String userNickname) {
         CARD_STATUS fromStatus = getStatus(fromListTitle);
         CARD_STATUS toStatus = getStatus(toListTitle);
-        if (!checkStep(fromStatus,toStatus))
+        ANSWER_CODE answer;
+        if (!checkStep(fromStatus, toStatus))
             return ANSWER_CODE.WRONG_LIST;
         else if (!isUserRegisteredToProject(userNickname))
             return ANSWER_CODE.PERMISSION_DENIED;
+
         else { // Se supera i controlli cerco la card nella lista.
             Card card = findCardInList(cardTitle, fromStatus); // In teoria potrebbe trovare la card nella lista DONE, questo non è possibile grazie al controllo sugli step.
             if (card == null) {
                 return ANSWER_CODE.UNKNOWN_CARD;
             }
 
-            if(getList(fromStatus).remove(card)){ // Se è rimossa dalla lista e aggiunta alla lista successiva.
-                 if(getList(toStatus).add(card)){
-                     return card.moveAndAdjournHistory(userNickname, toStatus); // Provo ad aggiornare la Card e ritorno.
-                 }
-                 else{ // In caso non sia riuscito ad aggiungerla alla lista successiva provo a ripristinare tutto.
-                     getList(fromStatus).add(card);
-                     return ANSWER_CODE.OP_FAIL;
-                 }
+            lock.writeLock().lock();
+            try{
+                if (getList(fromStatus).remove(card)) { // Se è rimossa dalla lista e aggiunta alla lista successiva.
+                    if (getList(toStatus).add(card)) {
+                        answer = card.moveAndAdjournHistory(userNickname, toStatus); // Provo ad aggiornare la Card e ritorno.
+                    } else { // In caso non sia riuscito ad aggiungerla alla lista successiva provo a ripristinare tutto.
+                        getList(fromStatus).add(card);
+                        answer = ANSWER_CODE.OP_FAIL;
+                    }
+                } else // In caso non sia riuscita a rimuoverla dalla lista.
+                    answer = ANSWER_CODE.OP_FAIL;
             }
-            else // In caso non sia riuscita a rimuoverla dalla lista.
-                return ANSWER_CODE.OP_FAIL;
+            finally{
+                lock.writeLock().unlock();
+            }
         }
+        return answer;
     }
 
     /*
@@ -111,21 +147,30 @@ public class Project {
      *			|| PERMISSION_DENIED se l'utente oldUserNickname non è registrato al progetto,
      *			|| OP_FAIL altrimenti.
      */
+    @Override
     public ANSWER_CODE addUser(String oldUserNickname, String newUserNickname) {
         if (!isUserRegisteredToProject(oldUserNickname))
             return ANSWER_CODE.PERMISSION_DENIED;
+
+        ANSWER_CODE answer;
+        lock.writeLock().lock();
         try {
-            if(!projectUsers.add(newUserNickname))
-                return ANSWER_CODE.OP_FAIL;
+            if (!projectUsers.add(newUserNickname))
+                answer = ANSWER_CODE.OP_FAIL;
+            else
+                answer = ANSWER_CODE.OP_OK;
+        } catch (Exception e) {
+            answer = ANSWER_CODE.OP_FAIL;
         }
-        catch (Exception e){
-            return ANSWER_CODE.OP_FAIL;
+        finally {
+            lock.writeLock().unlock();
         }
-        return ANSWER_CODE.OP_OK;
+        return answer;
     }
 
     // TODO: 12/01/21 implementare
-    public ANSWER_CODE cancelProject(String userNickname){
+    @Override
+    public ANSWER_CODE cancelProject(String userNickname) {
         if (!isUserRegisteredToProject(userNickname))
             return ANSWER_CODE.PERMISSION_DENIED;
 
@@ -145,18 +190,20 @@ public class Project {
      * RETURN: La stringa creata.
      */
     // TODO: 14/01/21 se non registrato non dovrebbe vedere la lista degli utenti
+    @Override
     public String prettyPrint(String userNickname) {
         return showCards(userNickname) +
                 ",\n Utenti Registrati: " + projectUsers;
     }
 
+    @Override
     public String showCards(String userNickname) {
-        if(isUserRegisteredToProject(userNickname)){
-        return "Progetto: " + projectTitle +
-                ",\n Todo: " + todoList.toString() +
-                ",\n In Progres: " + inProgresList.toString() +
-                ",\n To Be Revised: " + toBeRevisedList.toString() +
-                ",\n Done: " + doneList.toString();
+        if (isUserRegisteredToProject(userNickname)) {
+            return "Progetto: " + projectTitle +
+                    ",\n Todo: " + todoList.toString() +
+                    ",\n In Progres: " + inProgresList.toString() +
+                    ",\n To Be Revised: " + toBeRevisedList.toString() +
+                    ",\n Done: " + doneList.toString();
         }
         return UTENTE_ERRATO;
     }
@@ -167,14 +214,16 @@ public class Project {
      * RETURN:
      */
     // TODO: 14/01/21 passare una copia? una stringa?
+    @Override
     public Card getCard(String cardTitle, String cardStatus, String userNickname) {
-        if(isUserRegisteredToProject(userNickname))
+        if (isUserRegisteredToProject(userNickname))
             return findCardInList(cardTitle, getStatus(cardStatus));
         return null;
     }
 
+    @Override
     public String getCardHistory(String cardTitle, String cardStatus, String userNickname) {
-        return getCard(cardTitle,cardStatus,userNickname).getCardHistory();
+        return getCard(cardTitle, cardStatus, userNickname).getCardHistory();
     }
 //    ------- Private Methods --------
 
@@ -212,7 +261,7 @@ public class Project {
 
     /*
      * RETURN: La lista relativa al titolo della lista.
-    */
+     */
     private List<Card> getList(CARD_STATUS listTitle) {
         List<Card> selectedList;
 
@@ -236,7 +285,7 @@ public class Project {
     }
 
     private CARD_STATUS getStatus(String cardStatus) {
-        switch (cardStatus){
+        switch (cardStatus) {
             case "TODO":
                 return CARD_STATUS.TODO;
             case "INPROGRESS":
