@@ -262,11 +262,11 @@ public class Project implements com.github.arci0066.worth.interfaces.ProjectInte
      * RETURN: true se lo è, false altrimenti.
      */
     private boolean checkStep(CARD_STATUS fromStatus, CARD_STATUS toStatus) {
-        if (fromStatus == CARD_STATUS.TODO && toStatus == CARD_STATUS.IN_PROGRESS)
+        if (fromStatus == CARD_STATUS.TODO && toStatus == CARD_STATUS.INPROGRESS)
             return true;
-        else if (fromStatus == CARD_STATUS.IN_PROGRESS && (toStatus == CARD_STATUS.TO_BE_REVISED || toStatus == CARD_STATUS.DONE))
+        else if (fromStatus == CARD_STATUS.INPROGRESS && (toStatus == CARD_STATUS.TOBEREVISED || toStatus == CARD_STATUS.DONE))
             return true;
-        else if (fromStatus == CARD_STATUS.TO_BE_REVISED && (toStatus == CARD_STATUS.IN_PROGRESS || toStatus == CARD_STATUS.DONE))
+        else if (fromStatus == CARD_STATUS.TOBEREVISED && (toStatus == CARD_STATUS.INPROGRESS || toStatus == CARD_STATUS.DONE))
             return true;
         else
             return false;
@@ -301,10 +301,10 @@ public class Project implements com.github.arci0066.worth.interfaces.ProjectInte
             case TODO:
                 selectedList = todoList;
                 break;
-            case IN_PROGRESS:
+            case INPROGRESS:
                 selectedList = inProgressList;
                 break;
-            case TO_BE_REVISED:
+            case TOBEREVISED:
                 selectedList = toBeRevisedList;
                 break;
             case DONE:
@@ -319,8 +319,8 @@ public class Project implements com.github.arci0066.worth.interfaces.ProjectInte
     private CARD_STATUS getStatus(String cardStatus) {
         return switch (cardStatus) {
             case "TODO" -> CARD_STATUS.TODO;
-            case "INPROGRESS" -> CARD_STATUS.IN_PROGRESS;
-            case "TOBEREVISED" -> CARD_STATUS.TO_BE_REVISED;
+            case "INPROGRESS" -> CARD_STATUS.INPROGRESS;
+            case "TOBEREVISED" -> CARD_STATUS.TOBEREVISED;
             case "DONE" -> CARD_STATUS.DONE;
             default -> null;
         };

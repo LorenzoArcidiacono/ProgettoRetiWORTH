@@ -3,14 +3,15 @@ package com.github.arci0066.worth.server;
 import com.github.arci0066.worth.enumeration.ANSWER_CODE;
 import com.github.arci0066.worth.interfaces.ServerInterface;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 public class Server implements ServerInterface {
+
     private ProjectsList projectsList;
     private UsersList registeredUsersList;
+    private ThreadPoolExecutor pool;
 
 
 // ------ Constructors ------
@@ -18,8 +19,22 @@ public class Server implements ServerInterface {
     public Server() {
         projectsList = ProjectsList.getSingletonInstance();
         registeredUsersList = UsersList.getSingletonInstance();
+        pool = new ThreadPoolExecutor(ServerSettings.MIN_THREAD_NUMBER,ServerSettings.MAX_THREAD_NUMBER,ServerSettings.THREAD_KEEP_ALIVE_TIME, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>());
     }
 
+    public void reciveMessage(Message msg){
+        if(msg == null){
+            System.out.println("ERRORE: Messaggio == null");
+        }
+        pool.execute(new Task(msg));
+        System.err.println(pool.getActiveCount() +" di: "+ pool.getPoolSize());
+
+    }
+
+    // TODO: 22/01/21 capire come gestire la chiusura 
+    public void shutServerDown(){
+        pool.shutdown();
+    }
 
     // ------ Methods --------
 // TODO: 17/01/21 Mancano controlli se utente è online

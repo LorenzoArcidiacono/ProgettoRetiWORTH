@@ -5,6 +5,7 @@ import com.github.arci0066.worth.enumeration.USER_STATUS;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+/*CLASSE THREAD SAFE*/
 public class User {
     private String nickname, password;
     private USER_STATUS userStatus;
@@ -66,6 +67,7 @@ public class User {
 
     public boolean isOnline() {
         boolean answer;
+        lock.readLock().lock();
         try {
             answer = userStatus.equals(USER_STATUS.ONLINE);
         } finally {

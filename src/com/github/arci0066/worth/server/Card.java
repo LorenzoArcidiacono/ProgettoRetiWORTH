@@ -65,6 +65,7 @@ public class Card implements com.github.arci0066.worth.interfaces.CardInterface 
     @Override
     public String toString() {
         return "[ Titolo: " + cardTitle +
+                " in: "+ cardStatus +
                 ", Descrizione: " + cardDescription + ']';
     }
 }
