@@ -1,61 +1,101 @@
 package com.github.arci0066.worth.server;
 
 import com.github.arci0066.worth.enumeration.ANSWER_CODE;
-import com.github.arci0066.worth.interfaces.ServerInterface;
 
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-
-public class Server implements ServerInterface {
-
+public class Task extends Thread {
+    Message message;
     private ProjectsList projectsList;
     private UsersList registeredUsersList;
-    private ThreadPoolExecutor pool;
 
-
-// ------ Constructors ------
-
-    public Server() {
+    // ------ Constructors ------
+    public Task(Message message) {
+        this.message = message;
         projectsList = ProjectsList.getSingletonInstance();
         registeredUsersList = UsersList.getSingletonInstance();
-        pool = new ThreadPoolExecutor(ServerSettings.MIN_THREAD_NUMBER,ServerSettings.MAX_THREAD_NUMBER,ServerSettings.THREAD_KEEP_ALIVE_TIME, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>());
     }
 
-    public void reciveMessage(Message msg){
-        if(msg == null){
-            System.out.println("ERRORE: Messaggio == null");
-        }
-        pool.execute(new Task(msg));
-        System.err.println(pool.getActiveCount() +" di: "+ pool.getPoolSize());
-
-    }
-
-    // TODO: 22/01/21 capire come gestire la chiusura 
-    public void shutServerDown(){
-        pool.shutdown();
-    }
-
-    // ------ Methods --------
-// TODO: 17/01/21 Mancano controlli se utente è online
-    /*
-     * REQUIRES: Strings != null
-     * EFFECTS: Registra un utente se il nickname non è già in uso, nel caso di esito positivo l'utente viene messo online
-     * RETURN: OP_OK se è andata a buon fine
-     *			|| EXISTING_USER se il nickname è già registrato
-     *			|| OP_FAIL in caso di errore
-     */
     @Override
-    public ANSWER_CODE register(String userNickname, String userPassword) {
-        if (userNickname == null || userPassword == null)
-            return ANSWER_CODE.OP_FAIL;
-        if (findUserByNickname(userNickname) != null) {
-            return ANSWER_CODE.EXISTING_USER;
+    public void run() {
+        System.out.println("Run avviato.");
+        ANSWER_CODE answer_code = ANSWER_CODE.OP_OK;
+        String string = message.getExtra();
+        switch (message.getOperationCode()) {
+            case LOGIN: {
+                answer_code = login(message.getSenderNickname(), message.getExtra());
+                break;
+            }
+            case LOGOUT: {
+                answer_code = logout(message.getSenderNickname());
+                break;
+            }
+            case LIST_USER: {
+                string = listUsers();
+                break;
+            }
+            case LIST_ONLINE_USER: {
+                string = listOnlineUsers();
+                break;
+            }
+            case LIST_PROJECTS: {
+                string = listProjects();
+                break;
+            }
+            case CREATE_PROJECT: {
+                answer_code = createProject(message.getProjectTitle(), message.getSenderNickname());
+                break;
+            }
+            case ADD_MEMBER: {
+                answer_code = addMember(message.getProjectTitle(), message.getSenderNickname(), message.getExtra());
+                break;
+            }
+            case ADD_CARD: {
+                answer_code = addCard(message.getProjectTitle(), message.getCardTitle(), message.getExtra(), message.getSenderNickname());
+                break;
+            }
+            case MOVE_CARD: {
+                answer_code = moveCard(message.getProjectTitle(), message.getCardTitle(), message.getExtra(), message.getSenderNickname());
+                break;
+            }
+            case SHOW_CARD_LIST: {
+                string = showCards(message.getProjectTitle(), message.getSenderNickname());
+                break;
+            }
+            case SHOW_CARD: {
+                string = showCard(message.getProjectTitle(), message.getCardTitle(), message.getExtra(), message.getSenderNickname());
+                if(string == null){
+                    answer_code = ANSWER_CODE.OP_FAIL;
+                }
+                break;
+            }
+            case SHOW_MEMBERS: {
+                string = showMembers(message.getProjectTitle(), message.getSenderNickname());
+                break;
+            }
+            case GET_CARD_HISTORY: {
+                string = getCardHistory(message.getProjectTitle(), message.getCardTitle(), message.getExtra(), message.getSenderNickname());
+                break;
+            }
+            case SHOW_PROJECT_CARDS: {
+                string = showCards(message.getProjectTitle(), message.getSenderNickname());
+                break;
+            }
+            case CANCEL_PROJECT: {
+                answer_code = cancelProject(message.getProjectTitle(), message.getSenderNickname());
+                break;
+            }
+            default: {
+                answer_code = ANSWER_CODE.OP_FAIL;
+                string = null;
+            }
         }
-        registeredUsersList.add(new User(userNickname, userPassword));
-        return ANSWER_CODE.OP_OK;
+        message.setAnswer(answer_code, string);
+        System.out.println(message.toString());
+        // TODO: 21/01/21 invio risposta al mittente
     }
 
+    // ------ Methods ------
+    // TODO: 22/01/21 quando ritorno project e poi ci lavoro sopra è thread safe?
+    // TODO: 22/01/21 leggere la lista degli utenti mi richiede più tempo di calcolo ma evita di prendere due lock nel caso l'utente non esista?
     /*
      * REQUIRES: Strings != null, nickname già registrato, password corretta
      * EFFECTS: se l'utente è registrato viene segnato come online
@@ -64,18 +104,15 @@ public class Server implements ServerInterface {
      *			|| WRONG_PASSWORD se la password è sbagliata
      *			|| OP_FAIL in caso di errore
      */
-    @Override
     public ANSWER_CODE login(String userNickname, String userPassword) {
         if (isNull(userNickname, userPassword)) {
             return ANSWER_CODE.OP_FAIL;
         }
-
         //Cerco l'utente
         User usr = findUserByNickname(userNickname);
         if (usr == null) {
             return ANSWER_CODE.UNKNOWN_USER;
         }
-
         //Controllo che le credenziali siano corrette e nel caso lo setto Online
         if (usr.checkCredential(userNickname, userPassword)) {
             usr.login();
@@ -88,13 +125,20 @@ public class Server implements ServerInterface {
      * REQUIRES: String != null
      * EFFECTS: Se il nickname è registrato e online viene settato com offline,
      */
-    @Override
-    public void logout(String userNickname) {
+    public ANSWER_CODE logout(String userNickname) {
+        if (isNull(userNickname)) {
+            return ANSWER_CODE.OP_FAIL;
+        }
+        //Cerco l'utente
         User usr = findUserByNickname(userNickname);
+        if (usr == null) {
+            return ANSWER_CODE.UNKNOWN_USER;
+        }
         if (usr.isOnline()) {
             usr.logout();
         }
         //Se non era online non faccio nulla.
+        return ANSWER_CODE.OP_OK;
     }
 
     /*
@@ -103,7 +147,6 @@ public class Server implements ServerInterface {
      * RETURN: Una stringa contenente i nickname degli utenti registrati
      */
     //Meglio se restituisse una List? No lui non deve manipolare nulla
-    @Override
     public String listUsers() {
         return registeredUsersList.getUsersNickname();
     }
@@ -124,7 +167,6 @@ public class Server implements ServerInterface {
      * RETURN: Una stringa contenente i nomi dei progetti
      */
     //Meglio se restituisse una List?
-    @Override
     public String listProjects() {
         return projectsList.getProjectsTitle();
     }
@@ -139,7 +181,6 @@ public class Server implements ServerInterface {
      *			|| EXISTING_PROJECT se il titolo è già in uso.
      *			|| OP_FAIL altrimenti.
      */
-    @Override
     public ANSWER_CODE createProject(String projectTitle, String userNickname) {
         //Controllo Parametri
         if (isNull(projectTitle, userNickname)) {
@@ -148,12 +189,13 @@ public class Server implements ServerInterface {
         if (findUserByNickname(userNickname) == null) {
             return ANSWER_CODE.UNKNOWN_USER;
         }
-        if (findProjectByTitle(projectTitle) != null) {
-            return ANSWER_CODE.EXISTING_PROJECT;
+        synchronized (projectsList) { // TODO ALTERNATIVE
+            if (findProjectByTitle(projectTitle) == null) {
+                projectsList.add(new Project(projectTitle, userNickname));
+                return ANSWER_CODE.OP_OK;
+            }
         }
-
-        projectsList.add(new Project(projectTitle, userNickname));
-        return ANSWER_CODE.OP_OK;
+        return ANSWER_CODE.EXISTING_PROJECT;
     }
 
     /*
@@ -165,7 +207,6 @@ public class Server implements ServerInterface {
      *          || PERMISSION_DENIED se l'utente oldUserNickname non è registrato al progetto
      *			|| OP_FAIL altrimenti.
      */
-    @Override
     public ANSWER_CODE addMember(String projectTitle, String oldUserNickname, String newUserNickname) {
         if (isNull(projectTitle, oldUserNickname, newUserNickname)) {
             return ANSWER_CODE.OP_FAIL;
@@ -187,7 +228,6 @@ public class Server implements ServerInterface {
      * RETURN: Una stringa contenente i nickname degli utenti registrati
      */
     //Meglio se restituisse una List?
-    @Override
     public String showMembers(String projectTitle, String userNickname) {
         if (isNull(projectTitle, userNickname)) {
             return "Errore nella richiesta.";
@@ -210,7 +250,6 @@ public class Server implements ServerInterface {
      * EFFECTS: Restituisce la lista delle com.github.arci0066.worth.extra.Card del progetto
      * RETURN: Una stringa contenente i titoli delle card divisi per status
      */
-    @Override
     public String showCards(String projectTitle, String userNickname) {
         if (isNull(projectTitle, userNickname)) {
             return "Errore nella richiesta.";
@@ -232,8 +271,7 @@ public class Server implements ServerInterface {
      * EFFECTS: Restituisce la card corrispondente a cardTitle in pojectTitle se questa esiste
      * RETURN: Una copia della card corrispondente se esiste, null altrimenti.
      */
-    @Override
-    public Card showCard(String projectTitle, String cardTitle, String cardStatus, String userNickname) {
+    public String showCard(String projectTitle, String cardTitle, String cardStatus, String userNickname) {
         if (isNull(projectTitle, cardTitle, userNickname)) {
             return null;
         }
@@ -241,8 +279,12 @@ public class Server implements ServerInterface {
             return null;
         }
         Project prj = findProjectByTitle(projectTitle);
-        if (prj != null)
-            return prj.getCard(cardTitle, cardStatus, userNickname);
+        if (prj != null) {
+            Card card = prj.getCard(cardTitle, cardStatus, userNickname);
+            if(card != null){
+                return card.toString();
+            }
+        }
         return null;
     }
 
@@ -255,7 +297,6 @@ public class Server implements ServerInterface {
      * 			|| PERMISSION_DENIED se l'utente non è registrato al progetto,
      * 			|| OP_FAIL in caso di errore.
      */
-    @Override
     public ANSWER_CODE addCard(String projectTitle, String cardTitle, String cardDescription, String userNickname) {
         if (isNull(projectTitle, cardTitle, cardDescription, userNickname))
             return ANSWER_CODE.OP_FAIL;
@@ -279,16 +320,16 @@ public class Server implements ServerInterface {
      * 			|| PERMISSION_DENIED se l'utente non è registrato al progetto,
      * 			|| OP_FAIL in caso di errore.
      */
-    @Override
-    public ANSWER_CODE moveCard(String projectTitle, String cardTitle, String fromListTitle, String toListTitle, String userNickname) {
-        if (isNull(projectTitle, cardTitle, fromListTitle, toListTitle, userNickname))
+    public ANSWER_CODE moveCard(String projectTitle, String cardTitle, String extra, String userNickname) {
+        if (isNull(projectTitle, cardTitle, extra, userNickname))
             return ANSWER_CODE.OP_FAIL;
         if (findUserByNickname(userNickname) == null)
             return ANSWER_CODE.UNKNOWN_USER;
-
+        String[] status = extra.split("->");  //Extra è una stringa tipo INPROGRESS->TOBEREVISED
+        System.err.println(status[0]+" "+status[1]);
         Project prj = findProjectByTitle(projectTitle);
         if (prj != null)
-            return prj.moveCard(cardTitle, fromListTitle, toListTitle, userNickname);
+            return prj.moveCard(cardTitle, status[0], status[1], userNickname);
         return ANSWER_CODE.UNKNOWN_PROJECT;
     }
 
@@ -297,7 +338,6 @@ public class Server implements ServerInterface {
      * EFFECTS:
      * RETURN: Restituisce la history della card in caso non ci siano problemi, null altrimenti.
      */
-    @Override
     public String getCardHistory(String projectTitle, String cardTitle, String cardStatus, String userNickname) {
         if (isNull(projectTitle, cardTitle, cardStatus, userNickname)) {
             return null;
@@ -319,7 +359,6 @@ public class Server implements ServerInterface {
      * RETURN: La chat del progetto, null in caso di errore.
      */
     // TODO: 13/01/21 Restituire la chat
-    @Override
     public String readChat(String projectTitle, String userNickname) {
         return null;
     }
@@ -332,7 +371,6 @@ public class Server implements ServerInterface {
      * 			|| PERMISSION_DENIED se l'utente non è registrato al progetto,
      * 			|| OP_FAIL in caso di errore.
      */
-    @Override
     public ANSWER_CODE sendChatMsg(String projectTitle, String message, String userNickname) {
         return ANSWER_CODE.OP_FAIL;
     }
@@ -346,8 +384,8 @@ public class Server implements ServerInterface {
      * 			|| PROJECT_NOT_FINISHED se esiste almeno una card non nella lista DONE
      * 			|| OP_FAIL in caso di errore.
      */
-    @Override
     public ANSWER_CODE cancelProject(String projectTitle, String userNickname) {
+        // TODO: 21/01/21 tutte le card devono essere DONE! 
         if (isNull(projectTitle, userNickname))
             return ANSWER_CODE.OP_FAIL;
         if (findUserByNickname(userNickname) == null) {
@@ -363,7 +401,18 @@ public class Server implements ServerInterface {
         return ANSWER_CODE.UNKNOWN_PROJECT;
     }
 
-// ----- Private Methods -------
+
+    /*---------  Private Methods -----------*/
+
+    private boolean isNull(String... strings) {
+        for (String str : strings) {
+            if (str == null) {
+                System.err.println("ERROR: isNull returned TRUE.");
+                return true;
+            }
+        }
+        return false;
+    }
 
     private User findUserByNickname(String userNickname) {
         return registeredUsersList.findUser(userNickname);
@@ -371,13 +420,5 @@ public class Server implements ServerInterface {
 
     private Project findProjectByTitle(String projectTitle) {
         return projectsList.findProject(projectTitle);
-    }
-
-    private boolean isNull(String... strings) {
-        for (String str : strings) {
-            if (str == null)
-                return true;
-        }
-        return false;
     }
 }

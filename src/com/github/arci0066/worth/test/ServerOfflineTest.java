@@ -1,5 +1,7 @@
 import com.github.arci0066.worth.enumeration.ANSWER_CODE;
+import com.github.arci0066.worth.enumeration.OP_CODE;
 import com.github.arci0066.worth.server.Card;
+import com.github.arci0066.worth.server.Message;
 import com.github.arci0066.worth.server.Server;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
@@ -19,33 +21,45 @@ public class ServerOfflineTest {
     @DisplayName("Server General Test offline")
     public static void main(String[] args) {
         Server server = new Server();
-
+        Message request;
         //Registro un po' di utenti
         Assertions.assertEquals(ANSWER_CODE.OP_OK, server.register(PIPPO, "Pippo1"));
         Assertions.assertEquals(ANSWER_CODE.OP_OK, server.register(PLUTO, "Pluto1"));
-        Assertions.assertEquals(ANSWER_CODE.OP_OK, server.register(TOPOLINO, "Topo 1"));
+        Assertions.assertEquals(ANSWER_CODE.OP_OK, server.register(TOPOLINO, "Topo1"));
 //        Controllo gestione errori di registrazione
         Assertions.assertEquals(ANSWER_CODE.EXISTING_USER, server.register(PIPPO, "Pippo1"));
         Assertions.assertEquals(ANSWER_CODE.OP_FAIL, server.register(PLUTO, null));
 
         //Stampo le liste degli utenti
-        prettyPrint(server.listUsers());
+        request = new Message(PIPPO,null,OP_CODE.LIST_USER,null,null,null);
+        server.reciveMessage(request);
         prettyPrint(server.listOnlineUsers());
 
         //Provo il login
-        Assertions.assertEquals(ANSWER_CODE.OP_OK, server.login(PIPPO, "Pippo1"));
+        //Assertions.assertEquals(ANSWER_CODE.OP_OK, server.login(PIPPO, "Pippo1"));
+        request = new Message(PIPPO, "Pippo1", OP_CODE.LOGIN, null, null, null);
+        server.reciveMessage(request);
+        request = new Message(PLUTO, "Pluto1", OP_CODE.LOGIN, null, null, null);
+        server.reciveMessage(request);
+        request = new Message(TOPOLINO, "Topo1", OP_CODE.LOGIN, null, null, null);
+        server.reciveMessage(request);
 //       Errori di Login
         Assertions.assertEquals(ANSWER_CODE.WRONG_PASSWORD, server.login(PIPPO, "Pippo"));
         Assertions.assertEquals(ANSWER_CODE.UNKNOWN_USER, server.login(PAPERINO, "Pippo"));
         Assertions.assertEquals(ANSWER_CODE.OP_FAIL, server.login(PIPPO, null));
 
         prettyPrint(server.listUsers());
+        // se non riusltano online è per via dei thread che non hanno finito
         prettyPrint(server.listOnlineUsers());
 
         //Provo progetto
         prettyPrint(server.listProjects());
         Assertions.assertEquals(ANSWER_CODE.OP_OK, server.createProject(PROGETTO, PLUTO));
-//        Errori creazione progetto
+
+        //qui i thread dovrebbero avere finito
+        prettyPrint(server.listOnlineUsers());
+
+        //        Errori creazione progetto
         Assertions.assertEquals(ANSWER_CODE.OP_FAIL, server.createProject(null, PLUTO));
         Assertions.assertEquals(ANSWER_CODE.UNKNOWN_USER, server.createProject(PROGETTO, PAPERINO));
         Assertions.assertEquals(ANSWER_CODE.EXISTING_PROJECT, server.createProject(PROGETTO, PLUTO));
@@ -90,6 +104,7 @@ public class ServerOfflineTest {
         prettyPrint(
                 server.showCard(PROGETTO, "Sommare", "INPROGRESS", PIPPO)
                         .getCardHistory());
+
     }
 
     private static void prettyPrint(String opString) {

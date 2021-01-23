@@ -1,31 +1,29 @@
 package com.github.arci0066.worth.server;
+import com.github.arci0066.worth.enumeration.ANSWER_CODE;
 import com.github.arci0066.worth.enumeration.OP_CODE;
 
 public class Message {
-    private String senderNickname, senderPassword;
+    private String senderNickname;
     private OP_CODE operationCode;
     private String projectTitle, cardTitle;
+    private ANSWER_CODE answerCode;
     //stringa da usare per la cardDescription o per i listTitle
     private String extra;
 
     //------------ Constructors -------------
-    public Message(String senderNickname, String senderPassword, OP_CODE operationCode, String projectTitle, String cardTitle, String extra) {
+    public Message(String senderNickname, String extra, OP_CODE operationCode, String projectTitle, String cardTitle, ANSWER_CODE answer) {
         this.senderNickname = senderNickname;
-        this.senderPassword = senderPassword;
         this.operationCode = operationCode;
         this.projectTitle = projectTitle;
         this.cardTitle = cardTitle;
         this.extra = extra;
+        this.answerCode = answer;
     }
 
     // ------ Getters -------
 
     public String getSenderNickname() {
         return senderNickname;
-    }
-
-    public String getSenderPassword() {
-        return senderPassword;
     }
 
     public OP_CODE getOperationCode() {
@@ -44,5 +42,36 @@ public class Message {
         return extra;
     }
 
+
+    // ------------ Setters -----------
+
+
+    public void setAnswer(ANSWER_CODE answer_code, String extra) {
+        this.answerCode = answer_code;
+        this. extra = extra;
+    }
+
+    public void setMessage(String senderNickname, String extra, OP_CODE operationCode, String projectTitle, String cardTitle, ANSWER_CODE answer) {
+        this.senderNickname = senderNickname;
+        this.operationCode = operationCode;
+        this.projectTitle = projectTitle;
+        this.cardTitle = cardTitle;
+        this.extra = extra;
+        this.answerCode = answer;
+    }
+
+
     // ------ Methods ------
+
+    @Override
+    public String toString() {
+        return "Message{" +
+                "senderNickname='" + senderNickname + '\'' +
+                ", operationCode=" + operationCode +
+                ", projectTitle='" + projectTitle + '\'' +
+                ", cardTitle='" + cardTitle + '\'' +
+                ", answerCode=" + answerCode +
+                ", extra='" + extra + '\'' +
+                '}';
+    }
 }
