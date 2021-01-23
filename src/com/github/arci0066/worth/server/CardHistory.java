@@ -21,7 +21,7 @@ public class CardHistory {
         date = new Date();
         events = new ArrayList<>();
 //        TODO aggiungere stampa del tempo
-        events.add(nickname + " created this card @"+formatter.format(date));
+        events.add(nickname + " created this card @ "+formatter.format(date));
     }
 
 //    ------ Metodi -------

@@ -17,6 +17,13 @@ public class Server implements ServerInterface {
 // ------ Constructors ------
 
     public Server() {
+        Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
+            public void run() {
+                System.out.println("In Shutdown Hook");
+                // TODO: 22/01/21 salvare tutto in memoria (forse dovrei farlo più spesso) chiudere connessioni
+                pool.shutdown();
+            }
+        }, "Shutdown-thread"));
         projectsList = ProjectsList.getSingletonInstance();
         registeredUsersList = UsersList.getSingletonInstance();
         pool = new ThreadPoolExecutor(ServerSettings.MIN_THREAD_NUMBER,ServerSettings.MAX_THREAD_NUMBER,ServerSettings.THREAD_KEEP_ALIVE_TIME, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>());
