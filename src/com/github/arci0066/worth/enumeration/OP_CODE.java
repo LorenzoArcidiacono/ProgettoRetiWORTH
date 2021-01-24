@@ -18,5 +18,4 @@ public enum OP_CODE {
     READ_CHAT,
     SEND_CHAT_MESSAGE,
     CANCEL_PROJECT,
-    SHOW_CARD_LIST;
 }

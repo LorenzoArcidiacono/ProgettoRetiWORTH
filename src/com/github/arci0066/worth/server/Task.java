@@ -56,10 +56,6 @@ public class Task extends Thread {
                 answer_code = moveCard(message.getProjectTitle(), message.getCardTitle(), message.getExtra(), message.getSenderNickname());
                 break;
             }
-            case SHOW_CARD_LIST: {
-                string = showCards(message.getProjectTitle(), message.getSenderNickname());
-                break;
-            }
             case SHOW_CARD: {
                 string = showCard(message.getProjectTitle(), message.getCardTitle(), message.getExtra(), message.getSenderNickname());
                 if(string == null){

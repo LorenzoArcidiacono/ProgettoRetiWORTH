@@ -2,389 +2,195 @@ package com.github.arci0066.worth.server;
 
 import com.github.arci0066.worth.enumeration.ANSWER_CODE;
 import com.github.arci0066.worth.interfaces.ServerInterface;
+import com.google.gson.Gson;
 
+import java.awt.event.ActionListener;
+import java.io.*;
+import java.net.*;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-public class Server implements ServerInterface {
-
-    private ProjectsList projectsList;
-    private UsersList registeredUsersList;
-    private ThreadPoolExecutor pool;
+public class Server {
 
 
-// ------ Constructors ------
+    // ------ Constructors ------
+    public static void main(String[] args) {
+        ProjectsList projectsList;
+        UsersList registeredUsersList;
+        ThreadPoolExecutor pool;
+        boolean exit;
 
-    public Server() {
+        Gson gson;
+        final ServerSocket serverSocket;
+
+
+        projectsList = ProjectsList.getSingletonInstance();
+        registeredUsersList = UsersList.getSingletonInstance();
+        pool = new ThreadPoolExecutor(ServerSettings.MIN_THREAD_NUMBER, ServerSettings.MAX_THREAD_NUMBER, ServerSettings.THREAD_KEEP_ALIVE_TIME, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>());
+        gson = new Gson();
+        exit = false;
+
+        try {
+            serverSocket = new ServerSocket();
+            serverSocket.bind(new InetSocketAddress(InetAddress.getLocalHost(),
+                    ServerSettings.SERVER_PORT));
+            System.out.println("Server: Aperta connessione: " + InetAddress.getLocalHost() + "," + ServerSettings.SERVER_PORT);
+
+        } catch (UnknownHostException e) { // TODO: 24/01/21 sistemare return
+            e.printStackTrace();
+            return;
+        } catch (IOException e) {
+            e.printStackTrace();
+            return;
+        }
+
         Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
             public void run() {
                 System.out.println("In Shutdown Hook");
                 // TODO: 22/01/21 salvare tutto in memoria (forse dovrei farlo più spesso) chiudere connessioni
                 pool.shutdown();
+                try {
+                    serverSocket.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }, "Shutdown-thread"));
+
+        while (!exit) {
+            System.out.println("\nWaiting for clients");
+            //Aspetto una connessione
+            try (Socket client = serverSocket.accept();
+                 BufferedReader reader = new BufferedReader(new
+                         InputStreamReader(client.getInputStream()));
+                 BufferedWriter writer = new BufferedWriter(new
+                         OutputStreamWriter(client.getOutputStream()));) {
+                System.out.println("\nServer: new client:" + client.getInetAddress());
+                System.out.flush();
+                System.out.println("Server Pronto a leggere.");
+
+                int numMessages = 0;
+                while (!client.isClosed()){
+                    Message msg = null;
+                    String message = "", read = "";
+                    while ((message = reader.readLine()) != null) {
+                        //message = reader.readLine();
+                        System.out.println("\nClient sent: " + message + "\n");
+                        System.out.println("SONO QUI");
+                        read += message;
+                        numMessages++;
+                        //read = read.replace("\n", "");
+                        System.out.println("\nServer read "+numMessages+": " + read + "\n");
+                        msg = gson.fromJson(read, Message.class);
+                        System.out.println(msg.toString());
+                        break;
+                    }
+                    System.out.println("Invio risposta");
+                    if(msg != null){
+                        msg.setAnswer(ANSWER_CODE.OP_OK,null);
+                        writer.write(gson.toJson(msg));
+                        writer.write("\n");
+                        writer.flush();
+                    }
+                    else { //Caso in cui l'utente abbia chiuso la comunicazione
+                        client.close();
+                        reader.close();
+                        writer.close();
+                    }
+                    if(client.isClosed()){
+                        System.out.println("Utente chiuso!");
+                    }
+                }
+
+            } catch (IOException e) {
+                e.printStackTrace();
+
+            }
+        }
+
+
+    }
+
+    /*public Server() {
+        Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
+            public void run() {
+                System.out.println("In Shutdown Hook");
+                // TODO: 22/01/21 salvare tutto in memoria (forse dovrei farlo più spesso) chiudere connessioni
+                pool.shutdown();
+                try {
+                    fileWriter.flush();
+                    serverSocket.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
             }
         }, "Shutdown-thread"));
         projectsList = ProjectsList.getSingletonInstance();
         registeredUsersList = UsersList.getSingletonInstance();
-        pool = new ThreadPoolExecutor(ServerSettings.MIN_THREAD_NUMBER,ServerSettings.MAX_THREAD_NUMBER,ServerSettings.THREAD_KEEP_ALIVE_TIME, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>());
+        pool = new ThreadPoolExecutor(ServerSettings.MIN_THREAD_NUMBER, ServerSettings.MAX_THREAD_NUMBER, ServerSettings.THREAD_KEEP_ALIVE_TIME, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>());
+        gson = new Gson();
+        exit = false;
+
+        try {
+            serverSocket = new ServerSocket();
+            serverSocket.bind(new InetSocketAddress(InetAddress.getLocalHost(),
+                    ServerSettings.SERVER_PORT));
+            f = new FileWriter("Server.txt");
+            fileWriter = new BufferedWriter(f);
+            fileWriter.write("Server: Aperta connessione: " + InetAddress.getLocalHost() + "," + ServerSettings.SERVER_PORT);
+            fileWriter.flush();
+
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
-    public void reciveMessage(Message msg){
-        if(msg == null){
+    public void run() {
+        while (!exit) {
+            try {
+                fileWriter.write("\nWaiting for clients");
+                fileWriter.flush();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            String message = "", read = "";
+            try (Socket client = serverSocket.accept();
+                 BufferedReader reader = new BufferedReader(new
+                         InputStreamReader(client.getInputStream()));
+                 BufferedWriter writer = new BufferedWriter(new
+                         OutputStreamWriter(client.getOutputStream()));) {
+                fileWriter.write("\nServer: new client:" + client.getInetAddress());
+                System.out.flush();
+                boolean done = false;
+                while (!message.contains("EOS")) {
+                    message = reader.readLine();
+
+                    fileWriter.write("\nClient sent: " + message + "\n");
+                    read += message;
+                    read = read.replace("EOS", "");
+                    fileWriter.write("\nServer read: " + read + "\n");
+                    Message msg = gson.fromJson(read, Message.class);
+                    fileWriter.write(msg.toString());
+                    fileWriter.flush();
+                }
+            } catch (IOException e) {
+                System.out.println("Client closed connection or some error appeared");
+            }
+        }
+
+    }*/
+
+
+    /*public void reciveMessage(Message msg) {
+        if (msg == null) {
             System.out.println("ERRORE: Messaggio == null");
         }
         pool.execute(new Task(msg));
-        System.err.println(pool.getActiveCount() +" di: "+ pool.getPoolSize());
+        System.err.println(pool.getActiveCount() + " di: " + pool.getPoolSize());
 
-    }
+    }*/
 
-    // TODO: 22/01/21 capire come gestire la chiusura 
-    public void shutServerDown(){
-        pool.shutdown();
-    }
-
-    // ------ Methods --------
-// TODO: 17/01/21 Mancano controlli se utente è online
-    /*
-     * REQUIRES: Strings != null
-     * EFFECTS: Registra un utente se il nickname non è già in uso, nel caso di esito positivo l'utente viene messo online
-     * RETURN: OP_OK se è andata a buon fine
-     *			|| EXISTING_USER se il nickname è già registrato
-     *			|| OP_FAIL in caso di errore
-     */
-    @Override
-    public ANSWER_CODE register(String userNickname, String userPassword) {
-        if (userNickname == null || userPassword == null)
-            return ANSWER_CODE.OP_FAIL;
-        if (findUserByNickname(userNickname) != null) {
-            return ANSWER_CODE.EXISTING_USER;
-        }
-        registeredUsersList.add(new User(userNickname, userPassword));
-        return ANSWER_CODE.OP_OK;
-    }
-
-    /*
-     * REQUIRES: Strings != null, nickname già registrato, password corretta
-     * EFFECTS: se l'utente è registrato viene segnato come online
-     * RETURN:	OP_OK se è andata a buon fine
-     *			|| UNKNOWN_USER se il nickname non è registrato,
-     *			|| WRONG_PASSWORD se la password è sbagliata
-     *			|| OP_FAIL in caso di errore
-     */
-    @Override
-    public ANSWER_CODE login(String userNickname, String userPassword) {
-        if (isNull(userNickname, userPassword)) {
-            return ANSWER_CODE.OP_FAIL;
-        }
-
-        //Cerco l'utente
-        User usr = findUserByNickname(userNickname);
-        if (usr == null) {
-            return ANSWER_CODE.UNKNOWN_USER;
-        }
-
-        //Controllo che le credenziali siano corrette e nel caso lo setto Online
-        if (usr.checkCredential(userNickname, userPassword)) {
-            usr.login();
-            return ANSWER_CODE.OP_OK;
-        }
-        return ANSWER_CODE.WRONG_PASSWORD;
-    }
-
-    /*
-     * REQUIRES: String != null
-     * EFFECTS: Se il nickname è registrato e online viene settato com offline,
-     */
-    @Override
-    public void logout(String userNickname) {
-        User usr = findUserByNickname(userNickname);
-        if (usr.isOnline()) {
-            usr.logout();
-        }
-        //Se non era online non faccio nulla.
-    }
-
-    /*
-     * REQUIRES:
-     * EFFECTS: Restituisce la lista degli utenti registrati
-     * RETURN: Una stringa contenente i nickname degli utenti registrati
-     */
-    //Meglio se restituisse una List? No lui non deve manipolare nulla
-    @Override
-    public String listUsers() {
-        return registeredUsersList.getUsersNickname();
-    }
-
-    /*
-     * REQUIRES:
-     * EFFECTS: Restituisce la lista degli utenti online al momento
-     * RETURN: Una stringa contenente i nickname degli utenti online
-     */
-    //Meglio se restituisse una List? No lui non deve manipolare nulla
-    public String listOnlineUsers() {
-        return registeredUsersList.getOnlineUsersNickname();
-    }
-
-
-    /*
-     * EFFECTS: Restituisce la lista dei progetti di cui l'utente è membro
-     * RETURN: Una stringa contenente i nomi dei progetti
-     */
-    //Meglio se restituisse una List?
-    @Override
-    public String listProjects() {
-        return projectsList.getProjectsTitle();
-    }
-
-    /*
-     * REQUIRES: @params != null
-     *      && UserNickName registrato
-     *      && projectTitle non deve essere già in uso.
-     * EFFECTS: Se il titolo non esiste già crea un progetto con quel titolo e aggiunge l'utente al progetto.
-     * RETURN: OP_OK se l'op. ha successo
-     *          || UNKNOWN_USER se l'utente non è registrato.
-     *			|| EXISTING_PROJECT se il titolo è già in uso.
-     *			|| OP_FAIL altrimenti.
-     */
-    @Override
-    public ANSWER_CODE createProject(String projectTitle, String userNickname) {
-        //Controllo Parametri
-        if (isNull(projectTitle, userNickname)) {
-            return ANSWER_CODE.OP_FAIL;
-        }
-        if (findUserByNickname(userNickname) == null) {
-            return ANSWER_CODE.UNKNOWN_USER;
-        }
-        if (findProjectByTitle(projectTitle) != null) {
-            return ANSWER_CODE.EXISTING_PROJECT;
-        }
-
-        projectsList.add(new Project(projectTitle, userNickname));
-        return ANSWER_CODE.OP_OK;
-    }
-
-    /*
-     * REQUIRES: @params != null && userNickname di un utente registrato && projectTitle di un progetto esistente && user registrato al progetto.
-     * EFFECTS: Aggiunge l'utente alla lista degli utenti del progetto (senza chiedere conferma all'utente)
-     * RETURN: OP_OK in caso non ci siano stati errori
-     *			|| UNKNOWN_PROJECT se projectTitle non è registrato
-     *			|| UNKNOWN_USER se userNickname non corrisponde a un utente
-     *          || PERMISSION_DENIED se l'utente oldUserNickname non è registrato al progetto
-     *			|| OP_FAIL altrimenti.
-     */
-    @Override
-    public ANSWER_CODE addMember(String projectTitle, String oldUserNickname, String newUserNickname) {
-        if (isNull(projectTitle, oldUserNickname, newUserNickname)) {
-            return ANSWER_CODE.OP_FAIL;
-        }
-        if (findUserByNickname(newUserNickname) == null || findUserByNickname(oldUserNickname) == null) {
-            return ANSWER_CODE.UNKNOWN_USER;
-        }
-
-        Project prj = findProjectByTitle(projectTitle);
-        if (prj == null) {
-            return ANSWER_CODE.UNKNOWN_PROJECT;
-        }
-        return prj.addUser(oldUserNickname, newUserNickname);
-    }
-
-    /*
-     * REQUIRES: String != null && user registrato al progetto.
-     * EFFECTS: Restituisce la lista degli utenti registrati al progetto
-     * RETURN: Una stringa contenente i nickname degli utenti registrati
-     */
-    //Meglio se restituisse una List?
-    @Override
-    public String showMembers(String projectTitle, String userNickname) {
-        if (isNull(projectTitle, userNickname)) {
-            return "Errore nella richiesta.";
-        }
-        if (findUserByNickname(userNickname) == null) {
-            return "L'utente non è registrato";
-        }
-
-        //findProjectByTitle è thread safe
-        Project prj = findProjectByTitle(projectTitle);
-        if (prj == null) {
-            return "Progetto inesistente.";
-        }
-        //se si bloccasse qui e qualcuno aggiungesse un User? devo bloccare il progetto?  è solo una copia?
-        return prj.getProjectUsers(userNickname);
-    }
-
-    /*
-     * REQUIRES: String != null && user registrato al progetto.
-     * EFFECTS: Restituisce la lista delle com.github.arci0066.worth.extra.Card del progetto
-     * RETURN: Una stringa contenente i titoli delle card divisi per status
-     */
-    @Override
-    public String showCards(String projectTitle, String userNickname) {
-        if (isNull(projectTitle, userNickname)) {
-            return "Errore nella richiesta.";
-        }
-        if (findUserByNickname(userNickname) == null) {
-            return "L'utente non è registrato";
-        }
-
-        Project prj = findProjectByTitle(projectTitle);
-        if (prj == null) {
-            return "Progetto inesistente.";
-        }
-
-        return prj.showCards(userNickname);
-    }
-
-    /*
-     * REQUIRES: String != null && user registrato al progetto.
-     * EFFECTS: Restituisce la card corrispondente a cardTitle in pojectTitle se questa esiste
-     * RETURN: Una copia della card corrispondente se esiste, null altrimenti.
-     */
-    @Override
-    public Card showCard(String projectTitle, String cardTitle, String cardStatus, String userNickname) {
-        if (isNull(projectTitle, cardTitle, userNickname)) {
-            return null;
-        }
-        if (findUserByNickname(userNickname) == null) {
-            return null;
-        }
-        Project prj = findProjectByTitle(projectTitle);
-        if (prj != null)
-            return prj.getCard(cardTitle, cardStatus, userNickname);
-        return null;
-    }
-
-    /*
-     * REQUIRES: String != null && user registrato al progetto.
-     * EFFECTS: Aggiunge una nuova card alla lista TODO del progetto
-     * RETURN: OP_OK se op. a buon fine
-     * 			|| UNKNOWN_PROJECT se il progetto non è registrato,
-     *          || UNKNOWN_USER se l'utente non è registrato,
-     * 			|| PERMISSION_DENIED se l'utente non è registrato al progetto,
-     * 			|| OP_FAIL in caso di errore.
-     */
-    @Override
-    public ANSWER_CODE addCard(String projectTitle, String cardTitle, String cardDescription, String userNickname) {
-        if (isNull(projectTitle, cardTitle, cardDescription, userNickname))
-            return ANSWER_CODE.OP_FAIL;
-        if (findUserByNickname(userNickname) == null) {
-            return ANSWER_CODE.UNKNOWN_USER;
-        }
-        Project prj = findProjectByTitle(projectTitle);
-        if (prj != null)
-            return prj.addCard(cardTitle, cardDescription, userNickname);
-        return ANSWER_CODE.UNKNOWN_PROJECT;
-    }
-
-    /*
-     * REQUIRES: String != null && user registrato al progetto.
-     * EFFECTS: Sposta la card da una lista alla successiva
-     * RETURN: OP_OK se op. a buon fine,
-     * 			|| UNKNOWN_PROJECT se il progetto non è registrato,
-     * 			|| UNKNOWN_CARD se la card non esiste nel progetto,
-     *          || UNKNOWN_USER se l'utente non è registrato,
-     *			|| WRONG_LIST se il titolo della lista è sbagliato o se lo spostamento non segue il flusso di lavoro,
-     * 			|| PERMISSION_DENIED se l'utente non è registrato al progetto,
-     * 			|| OP_FAIL in caso di errore.
-     */
-    @Override
-    public ANSWER_CODE moveCard(String projectTitle, String cardTitle, String fromListTitle, String toListTitle, String userNickname) {
-        if (isNull(projectTitle, cardTitle, fromListTitle, toListTitle, userNickname))
-            return ANSWER_CODE.OP_FAIL;
-        if (findUserByNickname(userNickname) == null)
-            return ANSWER_CODE.UNKNOWN_USER;
-
-        Project prj = findProjectByTitle(projectTitle);
-        if (prj != null)
-            return prj.moveCard(cardTitle, fromListTitle, toListTitle, userNickname);
-        return ANSWER_CODE.UNKNOWN_PROJECT;
-    }
-
-    /*
-     * REQUIRES: String != null && user registrato al progetto.
-     * EFFECTS:
-     * RETURN: Restituisce la history della card in caso non ci siano problemi, null altrimenti.
-     */
-    @Override
-    public String getCardHistory(String projectTitle, String cardTitle, String cardStatus, String userNickname) {
-        if (isNull(projectTitle, cardTitle, cardStatus, userNickname)) {
-            return null;
-        }
-
-        if (findUserByNickname(userNickname) == null) {
-            return null;
-        }
-
-        Project prj = findProjectByTitle(projectTitle);
-        if (prj != null)
-            return prj.getCardHistory(cardTitle, cardStatus, userNickname);
-
-        return null;
-    }
-
-    /*
-     * REQUIRES: String != null && user registrato al progetto.
-     * RETURN: La chat del progetto, null in caso di errore.
-     */
-    // TODO: 13/01/21 Restituire la chat
-    @Override
-    public String readChat(String projectTitle, String userNickname) {
-        return null;
-    }
-
-    /*
-     * REQUIRES: String != null && user registrato al progetto.
-     * EFFECTS: Scrive il messaggio nella chat del progetto
-     * RETURN: OP_OK se op. a buon fine
-     * 			|| UNKNOWN_PROJECT se il progetto non è registrato,
-     * 			|| PERMISSION_DENIED se l'utente non è registrato al progetto,
-     * 			|| OP_FAIL in caso di errore.
-     */
-    @Override
-    public ANSWER_CODE sendChatMsg(String projectTitle, String message, String userNickname) {
-        return ANSWER_CODE.OP_FAIL;
-    }
-
-    /*
-     * REQUIRES: String != null && user registrato al progetto.
-     * EFFECTS: Cancella il progetto se tutte le card sono in Done
-     * RETURN: OP_OK se op. a buon fine
-     * 			|| UNKNOWN_PROJECT se il progetto non è registrato,
-     * 			|| PERMISSION_DENIED se l'utente non è registrato al progetto,
-     * 			|| PROJECT_NOT_FINISHED se esiste almeno una card non nella lista DONE
-     * 			|| OP_FAIL in caso di errore.
-     */
-    @Override
-    public ANSWER_CODE cancelProject(String projectTitle, String userNickname) {
-        if (isNull(projectTitle, userNickname))
-            return ANSWER_CODE.OP_FAIL;
-        if (findUserByNickname(userNickname) == null) {
-            return ANSWER_CODE.UNKNOWN_USER;
-        }
-
-        Project prj = findProjectByTitle(projectTitle);
-        if (prj != null) {
-            prj.cancelProject(userNickname);
-            projectsList.remove(prj);
-            return ANSWER_CODE.OP_OK;
-        }
-        return ANSWER_CODE.UNKNOWN_PROJECT;
-    }
-
-// ----- Private Methods -------
-
-    private User findUserByNickname(String userNickname) {
-        return registeredUsersList.findUser(userNickname);
-    }
-
-    private Project findProjectByTitle(String projectTitle) {
-        return projectsList.findProject(projectTitle);
-    }
-
-    private boolean isNull(String... strings) {
-        for (String str : strings) {
-            if (str == null)
-                return true;
-        }
-        return false;
-    }
 }

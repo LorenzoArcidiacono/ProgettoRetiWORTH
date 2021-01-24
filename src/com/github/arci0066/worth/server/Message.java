@@ -2,7 +2,11 @@ package com.github.arci0066.worth.server;
 import com.github.arci0066.worth.enumeration.ANSWER_CODE;
 import com.github.arci0066.worth.enumeration.OP_CODE;
 
-public class Message {
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.io.Serializable;
+
+public class Message implements Serializable {
     private String senderNickname;
     private OP_CODE operationCode;
     private String projectTitle, cardTitle;
