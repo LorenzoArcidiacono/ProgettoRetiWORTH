@@ -2,16 +2,13 @@ package com.github.arci0066.worth.server;
 import com.github.arci0066.worth.enumeration.ANSWER_CODE;
 import com.github.arci0066.worth.enumeration.OP_CODE;
 
-import java.io.BufferedWriter;
-import java.io.IOException;
-import java.io.Serializable;
 
-public class Message implements Serializable {
+public class Message{
     private String senderNickname;
     private OP_CODE operationCode;
     private String projectTitle, cardTitle;
     private ANSWER_CODE answerCode;
-    //stringa da usare per la cardDescription o per i listTitle
+    //stringa da usare per la cardDescription, per i listTitle e password
     private String extra;
 
     //------------ Constructors -------------
@@ -49,12 +46,13 @@ public class Message implements Serializable {
 
     // ------------ Setters -----------
 
-
+    //Usato dal server per settare e inviare la risposta
     public void setAnswer(ANSWER_CODE answer_code, String extra) {
         this.answerCode = answer_code;
         this. extra = extra;
     }
 
+    // TODO: 25/01/21 capire se posso eliminarla
     public void setMessage(String senderNickname, String extra, OP_CODE operationCode, String projectTitle, String cardTitle, ANSWER_CODE answer) {
         this.senderNickname = senderNickname;
         this.operationCode = operationCode;

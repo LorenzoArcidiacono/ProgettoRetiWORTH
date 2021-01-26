@@ -1,5 +1,6 @@
 package com.github.arci0066.worth.client;
 
+import com.github.arci0066.worth.enumeration.OP_CODE;
 import com.github.arci0066.worth.server.Message;
 import com.github.arci0066.worth.server.ServerSettings;
 import com.google.gson.Gson;
@@ -9,17 +10,17 @@ import java.net.*;
 import java.util.Scanner;
 
 public class Client extends Thread {
-    private Scanner scanner;
-    private Message message;
+    private Scanner scanner;    //Per leggere le richieste dell'utente
 
     // ---- Connessione con il Server ----
     protected Socket clientSocket;
-    BufferedReader readerIn;
-    BufferedWriter writerOut;
-    Gson gson;
+    private BufferedReader readerIn;
+    private BufferedWriter writerOut;
+    private Gson gson;
 
     public Client() {
         scanner = new Scanner(System.in);
+        scanner.useDelimiter(System.lineSeparator()); //Evita di lasciare un '\n' in sospeso
         clientSocket = new Socket();
         gson = new Gson();
     }
@@ -32,12 +33,12 @@ public class Client extends Thread {
         System.out.println("Scelto " + operazione);
 
         if (!exit) {
-           if(!openConnection()){
-               exit = true;
-               System.out.println("Errore di connessione");
-           }
+            if (!openConnection()) {
+                exit = true;
+                System.out.println("Errore di connessione");
+            }
         }
-        if(!exit){
+        if (!exit) {
             System.out.println("Client: connesso al server.");
 
             switch (operazione) {
@@ -56,23 +57,23 @@ public class Client extends Thread {
                 operazione = scegliOperazione();
                 switch (operazione) {
                     case 1 -> msg = login(); // TODO: 23/01/21 posso eliminarlo e se logout lo mando al menù prima;
-                    case 2 -> logout();
-                    case 3 -> listUsers();
-                    case 4 -> listOnlineUsers();
-                    case 5 -> listProjects();
-                    case 6 -> createProject();
-                    case 7 -> addMember();
-                    case 8 -> showMember();
-                    case 9 -> showProjectCards();
-                    case 10 -> showCard();
-                    case 11 -> addCard();
-                    case 12 -> moveCard();
-                    case 13 -> getCardHistory();
+                    case 2 -> msg = logout();
+                    case 3 -> msg = listUsers();
+                    case 4 -> msg = listOnlineUsers();
+                    case 5 -> msg = listProjects();
+                    case 6 -> msg = createProject();
+                    case 7 -> msg = addMember();
+                    case 8 -> msg = showMember();
+                    case 9 -> msg = showProjectCards();
+                    case 10 -> msg = showCard();
+                    case 11 -> msg = addCard();
+                    case 12 -> msg = moveCard();
+                    case 13 -> msg = getCardHistory();
                     case 14, 15 -> {
                         System.err.println("Non supportata.");
                         break;
                     }
-                    case 16 -> cancelProject();
+                    case 16 -> msg = cancelProject();
                     case 17 -> exit = true;
                     default -> {
                         System.out.println("Scelta non valida.");
@@ -87,6 +88,7 @@ public class Client extends Thread {
             }
             try {
                 System.out.println("Chiudo Socket");
+                scanner.close();
                 clientSocket.close();
                 readerIn.close();
                 writerOut.close();
@@ -94,6 +96,7 @@ public class Client extends Thread {
                 e.printStackTrace();
             }
         }
+
     }
 
     private boolean openConnection() {
@@ -125,13 +128,13 @@ public class Client extends Thread {
     }
 
     private void aspettaRispostaServer() {
-        String message="",read = "";
+        String message = "", read = "";
         try {
-            while((message = readerIn.readLine()) != null) {
+            while ((message = readerIn.readLine()) != null) {
                 read += message;
                 break;
             }
-            System.out.println("RED:"+read);
+            System.out.println("RED:" + read);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -175,45 +178,100 @@ public class Client extends Thread {
     }
 
     private Message login() {
-        return new Message("Pluto", "Pluto1", null, null, null, null);
+        return new Message("Pluto", "Pluto1", OP_CODE.LOGIN, null, null, null);
     }
 
-    private void logout() {
+    private Message logout() {
+        return new Message("Pluto", null, OP_CODE.LOGOUT, null, null, null);
     }
 
-    private void listUsers() {
+    private Message listUsers() {
+        return new Message("Pluto", null, OP_CODE.LIST_USER, null, null, null);
     }
 
-    private void listOnlineUsers() {
+    private Message listOnlineUsers() {
+        return new Message("Pluto", null, OP_CODE.LIST_ONLINE_USER, null, null, null);
     }
 
-    private void listProjects() {
+    private Message listProjects() {
+        return new Message("Pluto", null, OP_CODE.LIST_PROJECTS, null, null, null);
     }
 
-    private void createProject() {
+    private Message createProject() {
+        String projectTitle;
+        System.out.print("Inserire il nome del Progetto:");
+        projectTitle = scanner.next();
+        return new Message("Pluto", null, OP_CODE.CREATE_PROJECT, projectTitle, null, null);
     }
 
-    private void addMember() {
+    private Message addMember() {
+        String projectTitle, user;
+        System.out.print("Inserire il nome del Progetto:");
+        projectTitle = scanner.next();
+        System.out.print("Inserire il nome del utente da aggiungere al progetto:");
+        user = scanner.next();
+        return new Message("Pluto", user, OP_CODE.ADD_MEMBER, projectTitle, null, null);
     }
 
-    private void showMember() {
+    private Message showMember() {
+        String projectTitle;
+        System.out.print("Inserire il nome del Progetto:");
+        projectTitle = scanner.next();
+        return new Message("Pluto", null, OP_CODE.SHOW_MEMBERS, projectTitle, null, null);
     }
 
-    private void showProjectCards() {
+    private Message showProjectCards() {
+        String projectTitle;
+        System.out.print("Inserire il nome del Progetto:");
+        projectTitle = scanner.next();
+        return new Message("Pluto", null, OP_CODE.SHOW_PROJECT_CARDS, projectTitle, null, null);
     }
 
-    private void showCard() {
+    private Message showCard() {
+        String projectTitle, card;
+        System.out.print("Inserire il nome del Progetto:");
+        projectTitle = scanner.next();
+        System.out.print("Inserire il nome della Card:");
+        card = scanner.next();
+        return new Message("Pluto", null, OP_CODE.SHOW_CARD, projectTitle, card, null);
     }
 
-    private void addCard() {
+    private Message addCard() {
+        String projectTitle, card;
+        System.out.print("Inserire il nome del Progetto:");
+        projectTitle = scanner.next();
+        System.out.print("Inserire il nome della Card:");
+        card = scanner.next();
+        return new Message("Pluto", null, OP_CODE.ADD_CARD, projectTitle, card, null);
     }
 
-    private void moveCard() {
+    private Message moveCard() {
+        String projectTitle, card, extra;
+        System.out.print("Inserire il nome del Progetto:");
+        projectTitle = scanner.next();
+        System.out.print("Inserire il nome della Card:");
+        card = scanner.next();
+        System.out.print("Inserire lista di partenza:"); // TODO: 25/01/21 Migliorare scelta lista!
+        extra = scanner.next();
+        extra += "->";
+        System.out.print("Inserire lista di destinazione:");
+        extra += scanner.next();
+        return new Message("Pluto", extra, OP_CODE.MOVE_CARD, projectTitle, card, null);
     }
 
-    private void getCardHistory() {
+    private Message getCardHistory() {
+        String projectTitle, card;
+        System.out.print("Inserire il nome del Progetto:");
+        projectTitle = scanner.next();
+        System.out.print("Inserire il nome della Card:");
+        card = scanner.next();
+        return new Message("Pluto", null, OP_CODE.GET_CARD_HISTORY, projectTitle, card, null);
     }
 
-    private void cancelProject() {
+    private Message cancelProject() {
+        String projectTitle;
+        System.out.print("Inserire il nome del Progetto:");
+        projectTitle = scanner.next();
+        return new Message("Pluto", null, OP_CODE.CANCEL_PROJECT, projectTitle, null, null);
     }
 }
