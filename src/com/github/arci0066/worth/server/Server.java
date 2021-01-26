@@ -15,18 +15,23 @@ public class Server {
     public static void main(String[] args) {
         ProjectsList projectsList;
         UsersList registeredUsersList;
+        SocketList socketList;
         ThreadPoolExecutor pool;
+        Thread leader;
+
         boolean exit;
 
         //Oggetti per la connessione
-        Gson gson;
         final ServerSocket serverSocket;
 
         //Inizializza gli oggetti
         projectsList = ProjectsList.getSingletonInstance();
         registeredUsersList = UsersList.getSingletonInstance();
+        socketList = SocketList.getSingletonInstance();
         pool = new ThreadPoolExecutor(ServerSettings.MIN_THREAD_NUMBER, ServerSettings.MAX_THREAD_NUMBER, ServerSettings.THREAD_KEEP_ALIVE_TIME, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>());
-        gson = new Gson();
+        leader = new Leader(pool);
+        leader.start();
+
         exit = false;
 
         //Apre la connessione
@@ -62,17 +67,15 @@ public class Server {
         while (!exit) {
             System.out.println("\nWaiting for clients");
             //Aspetta una connessione
-            try (Socket client = serverSocket.accept();
-                 BufferedReader reader = new BufferedReader(new
-                         InputStreamReader(client.getInputStream()));
-                 BufferedWriter writer = new BufferedWriter(new
-                         OutputStreamWriter(client.getOutputStream()));) {
-
+            System.out.println("2 "+socketList);
+            Socket client;
+            try {
+                client = serverSocket.accept();
                 System.out.println("\nServer: new client:" + client.getRemoteSocketAddress());
-                System.out.flush();
-                System.out.println("Server Pronto a leggere.");
+                socketList.add(client);
+                System.out.println(socketList);
 
-                int numMessages = 0; //Per stampare quanti messagi ha mandato un utente
+                /*int numMessages = 0; //Per stampare quanti messagi ha mandato un utente
                 while (!client.isClosed()) {
                     Message msg = null;
                     String message, read = "";
@@ -95,14 +98,10 @@ public class Server {
                         client.close();
                         reader.close();
                         writer.close();
-                    }
-                }
-            } catch (IOException e) {
+                    }*/
+                } catch (IOException e) {
                 e.printStackTrace();
-
             }
         }
-
-
     }
 }

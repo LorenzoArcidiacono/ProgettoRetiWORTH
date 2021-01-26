@@ -52,6 +52,10 @@ public class Client extends Thread {
             }
 
             while (!exit) {
+                if(clientSocket.isClosed()){
+                    System.err.println("Connessione chiusa");
+                    break;
+                }
                 Message msg = null;
                 printOperationMenu();
                 operazione = scegliOperazione();
