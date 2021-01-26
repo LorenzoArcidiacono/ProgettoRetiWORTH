@@ -43,6 +43,11 @@ public class Message{
         return extra;
     }
 
+    public ANSWER_CODE getAnswerCode() {
+        return answerCode;
+    }
+
+
 
     // ------------ Setters -----------
 
@@ -50,16 +55,6 @@ public class Message{
     public void setAnswer(ANSWER_CODE answer_code, String extra) {
         this.answerCode = answer_code;
         this. extra = extra;
-    }
-
-    // TODO: 25/01/21 capire se posso eliminarla
-    public void setMessage(String senderNickname, String extra, OP_CODE operationCode, String projectTitle, String cardTitle, ANSWER_CODE answer) {
-        this.senderNickname = senderNickname;
-        this.operationCode = operationCode;
-        this.projectTitle = projectTitle;
-        this.cardTitle = cardTitle;
-        this.extra = extra;
-        this.answerCode = answer;
     }
 
 
@@ -76,4 +71,6 @@ public class Message{
                 ", extra='" + extra + '\'' +
                 '}';
     }
+
+
 }

@@ -37,11 +37,11 @@ public class SocketList implements Iterable<Connection>{
         connectionsList.add(new Connection(socket));
     }
 
-    public void remove(Socket socket) {
-        // TODO: 26/01/21 devo chiudere il socket?? 
-        Connection connection = findBySocket(socket);
+    public void remove(Connection connection) throws IOException {
+        // TODO: 26/01/21 devo chiudere il socket??
         if (connection != null)
-            connectionsList.remove(findBySocket(socket));
+            connection.close();
+            connectionsList.remove(connection);
     }
 
     private Connection findBySocket(Socket socket) {
@@ -66,4 +66,5 @@ public class SocketList implements Iterable<Connection>{
                 "connectionsList=" + connectionsList +
                 '}';
     }
+
 }

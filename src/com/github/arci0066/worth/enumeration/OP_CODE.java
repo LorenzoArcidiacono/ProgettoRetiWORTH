@@ -18,4 +18,5 @@ public enum OP_CODE {
     READ_CHAT,
     SEND_CHAT_MESSAGE,
     CANCEL_PROJECT,
+    CLOSE_CONNECTION;
 }

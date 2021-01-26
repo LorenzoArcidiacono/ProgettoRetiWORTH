@@ -53,7 +53,7 @@ public class Server {
         Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
             public void run() {
                 System.out.println("In Shutdown Hook");
-                // TODO: 22/01/21 salvare tutto in memoria (forse dovrei farlo più spesso) chiudere connessioni
+                // TODO: 22/01/21 salvare tutto in memoria (forse dovrei farlo più spesso in Leader) chiudere connessioni
                 pool.shutdown();
                 try {
                     serverSocket.close();
@@ -67,12 +67,14 @@ public class Server {
         while (!exit) {
             System.out.println("\nWaiting for clients");
             //Aspetta una connessione
-            System.out.println("2 "+socketList);
+            System.out.println("2 " + socketList);
             Socket client;
             try {
                 client = serverSocket.accept();
                 System.out.println("\nServer: new client:" + client.getRemoteSocketAddress());
-                socketList.add(client);
+                synchronized (socketList) {
+                    socketList.add(client);
+                }
                 System.out.println(socketList);
 
                 /*int numMessages = 0; //Per stampare quanti messagi ha mandato un utente
@@ -99,7 +101,7 @@ public class Server {
                         reader.close();
                         writer.close();
                     }*/
-                } catch (IOException e) {
+            } catch (IOException e) {
                 e.printStackTrace();
             }
         }

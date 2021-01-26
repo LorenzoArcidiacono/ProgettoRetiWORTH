@@ -8,11 +8,14 @@ public class Connection {
     BufferedReader reader;
     BufferedWriter writer;
 
+    boolean inUse;
+
     // ------ Constructors ------
     public Connection(Socket socket) throws IOException {
         this.socket = socket;
         reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
         writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
+        inUse = false;
     }
 
     // ------ Getters -------
@@ -28,9 +31,17 @@ public class Connection {
         return writer;
     }
 
+    public void setInUse(boolean inUse) {
+        this.inUse = inUse;
+    }
+
     // ------ Methods ------
     public boolean isReaderReady() throws IOException {
         return reader.ready();
+    }
+
+    public boolean isInUse() {
+        return inUse;
     }
 
     public boolean isClosed() {
@@ -43,5 +54,11 @@ public class Connection {
                 "socket=" + socket.getRemoteSocketAddress() +
                 "is open:" + !socket.isClosed()+
                 '}';
+    }
+
+    public void close() throws IOException {
+        socket.close();
+        reader.close();
+        writer.close();
     }
 }
