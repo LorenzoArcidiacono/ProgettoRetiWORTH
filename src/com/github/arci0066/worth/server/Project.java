@@ -317,6 +317,7 @@ public class Project implements com.github.arci0066.worth.interfaces.ProjectInte
     }
 
     private CARD_STATUS getStatus(String cardStatus) {
+        cardStatus=cardStatus.toUpperCase();
         return switch (cardStatus) {
             case "TODO" -> CARD_STATUS.TODO;
             case "INPROGRESS" -> CARD_STATUS.INPROGRESS;

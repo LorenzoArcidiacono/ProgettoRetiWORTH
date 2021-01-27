@@ -59,7 +59,8 @@ public class UsersList {
         return str;
     }
 
-// ------ Methods ------
+    // ------ Methods ------
+// TODO: 27/01/21 evitare duplicati
     public void add(User user) {
         lock.writeLock().lock();
         try {
@@ -72,17 +73,22 @@ public class UsersList {
     public User findUser(String userNickname) {
         User user = null;
         lock.readLock().lock();
-        try{
+        try {
             for (User usr : usersList) {
+                System.out.println("Trovato " + usr);
                 if (usr.getNickname().equals(userNickname))
                     user = usr;
             }
-        }
-        finally{
-        lock.readLock().unlock();
+        } finally {
+            lock.readLock().unlock();
         }
         return user;
     }
-// ------ Setters -------
 
+    @Override
+    public String toString() {
+        return "UsersList{" +
+                "usersList=" + usersList.toString() +
+                '}';
+    }
 }

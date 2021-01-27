@@ -16,7 +16,7 @@ public class Leader extends Thread {
 
     @Override
     public void run() {
-        while (true) {
+        while (true) { // TODO: 27/01/21 posso impostare un timeout? se ho pochi client giro molto a vuoto, posso cambiarlo in base al lavoro del pool o al numero di client 
             synchronized (socketList) { // TODO Non esco mai e il server non può aggiungere?
                 Iterator<Connection> iterator = socketList.iterator();
                 while (iterator.hasNext()){

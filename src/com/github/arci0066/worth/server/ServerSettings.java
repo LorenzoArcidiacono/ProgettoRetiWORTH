@@ -8,4 +8,6 @@ public class ServerSettings {
     public static final int SERVER_PORT = 65535;
 
     public static final String MESSAGE_TERMINATION_CODE = "END";
+    public static final int REGISTRY_PORT = 65534;
+    public static final String REGISRTY_OP_NAME = "SERVER_REGISTRATION";
 }

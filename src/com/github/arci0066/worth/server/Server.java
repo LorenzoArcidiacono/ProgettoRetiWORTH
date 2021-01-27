@@ -1,10 +1,16 @@
 package com.github.arci0066.worth.server;
 
 import com.github.arci0066.worth.enumeration.ANSWER_CODE;
+import com.github.arci0066.worth.interfaces.RemoteRegistrationInterface;
 import com.google.gson.Gson;
 
 import java.io.*;
 import java.net.*;
+import java.rmi.AlreadyBoundException;
+import java.rmi.RemoteException;
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
+import java.rmi.server.UnicastRemoteObject;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -23,6 +29,7 @@ public class Server {
 
         //Oggetti per la connessione
         final ServerSocket serverSocket;
+        RemoteRegistration rmi;
 
         //Inizializza gli oggetti
         projectsList = ProjectsList.getSingletonInstance();
@@ -33,14 +40,12 @@ public class Server {
         leader.start();
 
         exit = false;
-
         //Apre la connessione
         try {
             serverSocket = new ServerSocket();
             serverSocket.bind(new InetSocketAddress(InetAddress.getLocalHost(),
                     ServerSettings.SERVER_PORT));
             System.out.println("Server: Aperta connessione: " + InetAddress.getLocalHost() + "," + ServerSettings.SERVER_PORT);
-
         } catch (UnknownHostException e) { // TODO: 24/01/21 sistemare return
             e.printStackTrace();
             return;
@@ -48,6 +53,17 @@ public class Server {
             e.printStackTrace();
             return;
         }
+//        Setto la RMI per la registrazione
+        try {
+            rmi = new RemoteRegistration();
+            RemoteRegistrationInterface stub = (RemoteRegistrationInterface) UnicastRemoteObject.exportObject(rmi,0);
+            LocateRegistry.createRegistry(ServerSettings.REGISTRY_PORT);
+            Registry registry = LocateRegistry.getRegistry(ServerSettings.REGISTRY_PORT);
+registry.rebind(ServerSettings.REGISRTY_OP_NAME,stub);
+        } catch (RemoteException e) {
+            e.printStackTrace();
+        }
+
 
         // Prepara un Thread di pulizia da lanciare prima della chiusura
         Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
