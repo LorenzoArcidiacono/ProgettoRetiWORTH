@@ -1,15 +1,22 @@
 package com.github.arci0066.worth.server;
 
 import com.github.arci0066.worth.enumeration.ANSWER_CODE;
+import com.github.arci0066.worth.enumeration.OP_CODE;
+import com.google.gson.Gson;
+
+import java.io.IOException;
 
 public class Task extends Thread {
     Message message;
+    Connection connection;
+    Gson gson;
     private ProjectsList projectsList;
     private UsersList registeredUsersList;
 
     // ------ Constructors ------
-    public Task(Message message) {
-        this.message = message;
+    public Task(Connection connection) {
+        this.connection = connection;
+        gson = new Gson();
         projectsList = ProjectsList.getSingletonInstance();
         registeredUsersList = UsersList.getSingletonInstance();
     }
@@ -17,6 +24,16 @@ public class Task extends Thread {
     @Override
     public void run() {
         System.out.println("Run avviato.");
+        try {
+            readMessage();
+        } catch (IOException e) {
+            e.printStackTrace();
+            return;
+        }
+        if (message == null) {
+            return;
+        }
+        System.out.println("Messaggio letto dal Task: " + message);
         ANSWER_CODE answer_code = ANSWER_CODE.OP_OK;
         String string = message.getExtra();
         switch (message.getOperationCode()) {
@@ -56,13 +73,9 @@ public class Task extends Thread {
                 answer_code = moveCard(message.getProjectTitle(), message.getCardTitle(), message.getExtra(), message.getSenderNickname());
                 break;
             }
-            case SHOW_CARD_LIST: {
-                string = showCards(message.getProjectTitle(), message.getSenderNickname());
-                break;
-            }
             case SHOW_CARD: {
                 string = showCard(message.getProjectTitle(), message.getCardTitle(), message.getExtra(), message.getSenderNickname());
-                if(string == null){
+                if (string == null) {
                     answer_code = ANSWER_CODE.OP_FAIL;
                 }
                 break;
@@ -83,14 +96,54 @@ public class Task extends Thread {
                 answer_code = cancelProject(message.getProjectTitle(), message.getSenderNickname());
                 break;
             }
+            case CLOSE_CONNECTION: {
+                try {// TODO: 26/01/21 Synchronize connection?
+                    connection.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
             default: {
                 answer_code = ANSWER_CODE.OP_FAIL;
                 string = null;
             }
         }
-        message.setAnswer(answer_code, string);
-        System.out.println(message.toString());
+        if (message.getOperationCode() != OP_CODE.CLOSE_CONNECTION) {
+            message.setAnswer(answer_code, string);
+            try {
+                sendAnswer();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            System.out.println(message.toString());
+        }
+        //Segno pronto a mandare una nuova richiesta
+        connection.setInUse(false);
         // TODO: 21/01/21 invio risposta al mittente
+    }
+
+    private void sendAnswer() throws IOException {
+        connection.getWriter().write(gson.toJson(message)+"\n");
+        connection.getWriter().write(ServerSettings.MESSAGE_TERMINATION_CODE+"\n");
+        connection.getWriter().flush();
+    }
+
+    private void readMessage() throws IOException {
+        String connectionMessage, read = "";
+        boolean end = false;
+       while (!end && (connectionMessage = connection.getReader().readLine())!=null) { // TODO: 25/01/21 Capire se manda più messaggi che fare
+            if(!connectionMessage.contains(ServerSettings.MESSAGE_TERMINATION_CODE)){
+                read += connectionMessage;
+                System.out.println("Task leggo " + read);
+                System.out.println("Provo a uscire");
+                //read = read.replace("END","");
+            }
+            else
+                end = true;
+            //break;
+        }
+        System.out.println("Task uscito");
+        message = gson.fromJson(read, Message.class);
     }
 
     // ------ Methods ------
@@ -105,6 +158,7 @@ public class Task extends Thread {
      *			|| OP_FAIL in caso di errore
      */
     public ANSWER_CODE login(String userNickname, String userPassword) {
+        System.out.println("Task: sono in login");
         if (isNull(userNickname, userPassword)) {
             return ANSWER_CODE.OP_FAIL;
         }
@@ -281,7 +335,7 @@ public class Task extends Thread {
         Project prj = findProjectByTitle(projectTitle);
         if (prj != null) {
             Card card = prj.getCard(cardTitle, cardStatus, userNickname);
-            if(card != null){
+            if (card != null) {
                 return card.toString();
             }
         }
@@ -326,7 +380,7 @@ public class Task extends Thread {
         if (findUserByNickname(userNickname) == null)
             return ANSWER_CODE.UNKNOWN_USER;
         String[] status = extra.split("->");  //Extra è una stringa tipo INPROGRESS->TOBEREVISED
-        System.err.println(status[0]+" "+status[1]);
+        System.err.println(status[0] + " " + status[1]);
         Project prj = findProjectByTitle(projectTitle);
         if (prj != null)
             return prj.moveCard(cardTitle, status[0], status[1], userNickname);
