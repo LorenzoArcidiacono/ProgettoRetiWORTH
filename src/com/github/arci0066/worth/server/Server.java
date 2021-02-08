@@ -2,7 +2,9 @@ package com.github.arci0066.worth.server;
 
 import com.github.arci0066.worth.enumeration.ANSWER_CODE;
 import com.github.arci0066.worth.interfaces.RemoteRegistrationInterface;
+import com.github.arci0066.worth.interfaces.ServerRMI;
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 
 import java.io.*;
 import java.net.*;
@@ -31,6 +33,10 @@ public class Server {
         final ServerSocket serverSocket;
         RemoteRegistration rmi;
 
+        Gson gson = new GsonBuilder()
+                .excludeFieldsWithoutExposeAnnotation()
+                .create();
+
         //Inizializza gli oggetti
         projectsList = ProjectsList.getSingletonInstance();
         registeredUsersList = UsersList.getSingletonInstance();
@@ -54,12 +60,19 @@ public class Server {
             return;
         }
 //        Setto la RMI per la registrazione
+        ServerRMIImpl server = null;
         try {
-            rmi = new RemoteRegistration();
-            RemoteRegistrationInterface stub = (RemoteRegistrationInterface) UnicastRemoteObject.exportObject(rmi,0);
+            server = new ServerRMIImpl();
             LocateRegistry.createRegistry(ServerSettings.REGISTRY_PORT);
             Registry registry = LocateRegistry.getRegistry(ServerSettings.REGISTRY_PORT);
-registry.rebind(ServerSettings.REGISRTY_OP_NAME,stub);
+// TODO: 27/01/21 pulire il tutto e capire se posso effettivamente mandarlo nel RemoteRegistration 
+            ServerRMI stub2 = (ServerRMI) UnicastRemoteObject.exportObject (server,0);
+            String name = "SERVER";
+            registry.rebind (name, stub2);
+
+            rmi = new RemoteRegistration(server);
+            RemoteRegistrationInterface stub = (RemoteRegistrationInterface) UnicastRemoteObject.exportObject(rmi, 0);
+            registry.rebind(ServerSettings.REGISRTY_OP_NAME, stub);
         } catch (RemoteException e) {
             e.printStackTrace();
         }
@@ -88,6 +101,7 @@ registry.rebind(ServerSettings.REGISRTY_OP_NAME,stub);
             try {
                 client = serverSocket.accept();
                 System.out.println("\nServer: new client:" + client.getRemoteSocketAddress());
+                //server.update(gson.toJson(registeredUsersList)); // TODO: 27/01/21 andrebbe messo al momento della registrazione
                 synchronized (socketList) {
                     socketList.add(client);
                 }

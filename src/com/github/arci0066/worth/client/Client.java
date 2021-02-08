@@ -2,7 +2,9 @@ package com.github.arci0066.worth.client;
 
 import com.github.arci0066.worth.enumeration.ANSWER_CODE;
 import com.github.arci0066.worth.enumeration.OP_CODE;
+import com.github.arci0066.worth.interfaces.NotifyEventInterface;
 import com.github.arci0066.worth.interfaces.RemoteRegistrationInterface;
+import com.github.arci0066.worth.interfaces.ServerRMI;
 import com.github.arci0066.worth.server.Message;
 import com.github.arci0066.worth.server.ServerSettings;
 import com.google.gson.Gson;
@@ -15,6 +17,7 @@ import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
+import java.rmi.server.UnicastRemoteObject;
 import java.util.Scanner;
 
 public class Client extends Thread {
@@ -27,21 +30,37 @@ public class Client extends Thread {
     private BufferedReader readerIn;
     private BufferedWriter writerOut;
 
+    // ----- Operazioni Remote --------
     RemoteRegistrationInterface serverObj;
     Remote remote;
+    Registry r;
+    ServerRMI serverInterface;
+    NotifyEventInterface callbackObj;
+    NotifyEventInterface stub;
 
     private Gson gson;
+    private File inputFileTest;
 
-    public Client() {
+    // TODO: 08/02/21 farlo diventare un main!
+    public Client(String testFileName) throws FileNotFoundException {
+        if (testFileName != null) {
+            System.setIn(new FileInputStream(new File(testFileName)));
+        }
         scanner = new Scanner(System.in);
         scanner.useDelimiter(System.lineSeparator()); //Evita di lasciare un '\n' in sospeso
         clientSocket = new Socket();
         gson = new Gson();
 
         try {
-            Registry r = LocateRegistry.getRegistry(ServerSettings.REGISTRY_PORT);
+            r = LocateRegistry.getRegistry(ServerSettings.REGISTRY_PORT);
             remote = r.lookup(ServerSettings.REGISRTY_OP_NAME);
             serverObj = (RemoteRegistrationInterface) remote;
+
+            serverInterface = (ServerRMI) r.lookup("SERVER");
+            callbackObj = new NotifyEventInterfaceImpl();
+            stub = (NotifyEventInterface) UnicastRemoteObject.exportObject(callbackObj, 0);
+            //serverInterface.registerForCallback(stub);
+
         } catch (AccessException e) {
             e.printStackTrace();
         } catch (RemoteException e) {
@@ -49,6 +68,8 @@ public class Client extends Thread {
         } catch (NotBoundException e) {
             e.printStackTrace();
         }
+
+
     }
 
     public void run() {
@@ -56,14 +77,15 @@ public class Client extends Thread {
         boolean exit = false;
         printWelcomeMenu();
         operazione = scegliOperazione();
-
+        boolean check = true;
         switch (operazione) {
-            case 1 -> register();
+            case 1 -> check = register();
             case 2 -> login();
             case 3 -> exit = true;
             default -> exit = true; // TODO: 27/01/21 riprovare
         }
-
+        if(check == false)
+            exit = true;
         if (!exit) {
             if (!openConnection()) {
                 exit = true;
@@ -133,11 +155,11 @@ public class Client extends Thread {
                 clientSocket.close();
                 readerIn.close();
                 writerOut.close();
+                serverInterface.unregisterForCallback(stub);
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
-
     }
 
 
@@ -238,16 +260,24 @@ public class Client extends Thread {
     //------ POSSIBILI OPERAZIONI ------
 
     // TODO: 27/01/21 cambiare ritorno
-    private void register() {
+    private boolean register() {
         System.out.print("Scegli uno Username:");
         nickname = scanner.next();
         System.out.print("Scegli una Password:");
         password = scanner.next();
+        ANSWER_CODE answer_code = ANSWER_CODE.OP_FAIL;
         try {
-            System.out.println(serverObj.register(nickname, password));
+            // TODO: 08/02/21 callback deve essere registrato dopo ma deve essere comunque inviato
+            serverInterface.registerForCallback(stub);
+            answer_code = serverObj.register(nickname, password);
+            System.err.println("Ricevuto "+answer_code);
         } catch (RemoteException e) {
             e.printStackTrace();
         }
+        if (answer_code.equals(ANSWER_CODE.OP_OK)) {
+            return true;
+        }
+        return false;
     }
 
     private Message login() {
@@ -314,7 +344,7 @@ public class Client extends Thread {
     }
 
     private Message addCard() {
-        String projectTitle, card,desc;
+        String projectTitle, card, desc;
         System.out.print("Inserire il nome del Progetto:");
         projectTitle = scanner.next();
         System.out.print("Inserire il nome della Card:");
@@ -339,7 +369,7 @@ public class Client extends Thread {
     }
 
     private Message getCardHistory() {
-        String projectTitle, card,list;
+        String projectTitle, card, list;
         System.out.print("Inserire il nome del Progetto:");
         projectTitle = scanner.next();
         System.out.print("Inserire il nome della Card:");

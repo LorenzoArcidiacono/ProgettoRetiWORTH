@@ -1,5 +1,8 @@
 package com.github.arci0066.worth.server;
 
+import com.google.gson.annotations.Expose;
+
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -7,6 +10,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class UsersList {
     private static UsersList instance;
+    @Expose
     List<User> usersList;
     ReadWriteLock lock;
 
@@ -91,4 +95,5 @@ public class UsersList {
                 "usersList=" + usersList.toString() +
                 '}';
     }
+
 }
