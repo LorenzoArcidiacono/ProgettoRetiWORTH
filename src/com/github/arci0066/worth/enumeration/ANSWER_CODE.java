@@ -38,7 +38,12 @@ public enum ANSWER_CODE {
             return "Password errata";
         }
     },
-    EXISTING_USER,
+    EXISTING_USER{
+        @Override
+        public String toString() {
+            return "Nickname precedentemente registrato.";
+        }
+    },
     EXISTING_PROJECT{
         @Override
         public String toString() {

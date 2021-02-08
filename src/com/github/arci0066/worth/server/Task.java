@@ -99,6 +99,7 @@ public class Task extends Thread {
             case CLOSE_CONNECTION: {
                 try {// TODO: 26/01/21 Synchronize connection?
                     connection.close();
+                    registeredUsersList.findUser(message.getSenderNickname()).logout(); // TODO: 27/01/21 se l'utente non esiste errore!
                 } catch (IOException e) {
                     e.printStackTrace();
                 }

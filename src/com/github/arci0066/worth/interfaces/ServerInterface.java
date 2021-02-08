@@ -14,9 +14,9 @@ public interface ServerInterface {
      *			|| OP_FAIL in caso di errore
      */
     /* Syncronized obj: registeredUserList
-    *   READ:
-    *   WRITE: registeredUserList
-    */
+     *   READ:
+     *   WRITE: registeredUserList
+     */
     ANSWER_CODE register(String userNickname, String userPassword);
 
     /*
@@ -28,9 +28,9 @@ public interface ServerInterface {
      *			|| OP_FAIL in caso di errore
      */
     /* Syncronized obj: user, userList
-    *   READ: userList
-    *   WRITE: user
-    */
+     *   READ: userList
+     *   WRITE: user
+     */
     ANSWER_CODE login(String userNickname, String userPassword);
 
     /*
@@ -60,9 +60,9 @@ public interface ServerInterface {
      * RETURN: Una stringa contenente i nomi dei progetti
      */
     /* Syncronized obj: projectList
-    *   READ: projectList
-    *   WRITE:
-    */
+     *   READ: projectList
+     *   WRITE:
+     */
     //Meglio se restituisse una List?
     String listProjects();
 
@@ -77,9 +77,9 @@ public interface ServerInterface {
      *			|| OP_FAIL altrimenti.
      */
     /* Syncronized obj: projectList
-    *   READ:
-    *   WRITE: projectList
-    */
+     *   READ:
+     *   WRITE: projectList
+     */
     ANSWER_CODE createProject(String projectTitle, String userNickname);
 
     /*
@@ -104,9 +104,9 @@ public interface ServerInterface {
      */
     //Meglio se restituisse una List?
     /* Syncronized obj:
-    *   READ: projectList, project, userList
-    *   WRITE:
-    */
+     *   READ: projectList, project, userList
+     *   WRITE:
+     */
     String showMembers(String projectTitle, String userNickname);
 
     /*

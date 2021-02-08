@@ -1,13 +1,19 @@
 package com.github.arci0066.worth.server;
 
 import com.github.arci0066.worth.enumeration.USER_STATUS;
+import com.github.arci0066.worth.interfaces.ServerRMI;
+import com.google.gson.annotations.Expose;
 
+import java.io.Serializable;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /*CLASSE THREAD SAFE*/
 public class User {
-    private String nickname, password;
+    @Expose
+    private String nickname;
+    private String password;
+    @Expose
     private USER_STATUS userStatus;
     private ReadWriteLock lock;
     //TODO descrittore della connessione
@@ -85,8 +91,7 @@ public class User {
                     "nickname='" + nickname + '\'' +
                     ": " + userStatus +
                     '}';
-        }
-        finally {
+        } finally {
             lock.readLock().unlock();
         }
         return str;
