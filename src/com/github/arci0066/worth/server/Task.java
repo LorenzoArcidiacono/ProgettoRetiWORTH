@@ -43,6 +43,11 @@ public class Task extends Thread {
             }
             case LOGOUT: {
                 answer_code = logout(message.getSenderNickname());
+                try {
+                    connection.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
                 break;
             }
             case LIST_USER: {
@@ -109,7 +114,7 @@ public class Task extends Thread {
                 string = null;
             }
         }
-        if (message.getOperationCode() != OP_CODE.CLOSE_CONNECTION) {
+        if (message.getOperationCode() != OP_CODE.CLOSE_CONNECTION && message.getOperationCode() != OP_CODE.LOGOUT) {
             message.setAnswer(answer_code, string);
             try {
                 sendAnswer();
