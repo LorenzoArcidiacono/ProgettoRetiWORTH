@@ -20,29 +20,157 @@ import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.Scanner;
 
-public class Client extends Thread {
-    private String password;
-    private String nickname;
-    private Scanner scanner;    //Per leggere le richieste dell'utente
+import static java.lang.Thread.sleep;
+
+public class Client {
+    private static BufferedReader readerIn = null;
+    private static BufferedWriter writerOut = null;
+
+    private static String password;
+    private static String nickname;
+    private static Scanner scanner;    //Per leggere le richieste dell'utente
 
     // ---- Connessione con il Server ----
-    protected Socket clientSocket;
-    private BufferedReader readerIn;
-    private BufferedWriter writerOut;
+    private static Socket clientSocket;
+
 
     // ----- Operazioni Remote --------
-    RemoteRegistrationInterface serverObj;
-    Remote remote;
-    Registry r;
-    ServerRMI serverInterface;
-    NotifyEventInterface callbackObj;
-    NotifyEventInterface stub;
+    private static RemoteRegistrationInterface serverObj;
+    private static Remote remote;
+    private static Registry r;
+    private static ServerRMI serverInterface = null;
+    private static NotifyEventInterface callbackObj;
+    private static NotifyEventInterface stub = null;
 
-    private Gson gson;
-    private File inputFileTest;
+    private static Gson gson;
+    private static File inputFileTest;
 
-    // TODO: 08/02/21 farlo diventare un main!
-    public Client(String testFileName) throws FileNotFoundException {
+    // TODO: 08/02/21 farlo diventare un main e pulire tutto!
+    public static void main(String[] args) {
+
+        if (args.length > 0) {
+            try { // se è specificato un file usa quello come input del client
+                System.setIn(new FileInputStream(new File(args[0])));
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+            }
+        }
+        scanner = new Scanner(System.in);
+        scanner.useDelimiter(System.lineSeparator()); //Evita di lasciare un '\n' in sospeso
+        clientSocket = new Socket();
+        gson = new Gson();
+
+        try { //collego la RMI
+            r = LocateRegistry.getRegistry(ServerSettings.REGISTRY_PORT);
+            remote = r.lookup(ServerSettings.REGISRTY_OP_NAME);
+            serverObj = (RemoteRegistrationInterface) remote;
+
+            serverInterface = (ServerRMI) r.lookup("SERVER");
+            callbackObj = new NotifyEventInterfaceImpl();
+            stub = (NotifyEventInterface) UnicastRemoteObject.exportObject(callbackObj, 0);
+            //serverInterface.registerForCallback(stub);
+
+        } catch (AccessException e) {
+            e.printStackTrace();
+        } catch (RemoteException e) {
+            e.printStackTrace();
+        } catch (NotBoundException e) {
+            e.printStackTrace();
+        }
+        //Primo menu per la scelta di come accedere
+        int operazione = -1;
+        boolean exit = false;
+        printWelcomeMenu();
+        operazione = scegliOperazione();
+        boolean check = true;
+        switch (operazione) {
+            case 1 -> check = register();
+            case 2 -> login();
+            case 3 -> exit = true;
+            default -> exit = true; // TODO: 27/01/21 riprovare
+        }
+        if (check == false)
+            exit = true;
+        if (!exit) {
+            if (!openConnection()) {
+                exit = true;
+                System.out.println("Errore di connessione");
+            }
+        }
+        if (!exit) {
+            System.out.println("Client: connesso al server.");
+
+            /*switch (operazione) {
+                case 1 -> register();
+                case 2 -> login();
+                case 3 -> exit = true;
+                default -> {
+                    System.out.println("Scelta non valida."); // TODO: 26/01/21 farlo riprovare
+                    exit = true;
+                }
+            }*/
+            //aspettaRispostaServer();
+            // Loop principale in cui scegliere le operazioni
+            while (!exit) {
+                if (clientSocket.isClosed()) {
+                    System.err.println("Connessione chiusa");
+                    break;
+                }
+                Message msg = null;
+                printOperationMenu();
+                operazione = scegliOperazione();
+                switch (operazione) {
+                    case 1 -> System.err.println("OP non possibile.");//msg = login(); // TODO: 23/01/21 posso eliminarlo e se logout lo mando al menù prima;
+                    case 2 -> {
+                        msg = logout();
+                        exit = true;
+                    }
+                    case 3 -> msg = listUsers();
+                    case 4 -> msg = listOnlineUsers();
+                    case 5 -> msg = listProjects();
+                    case 6 -> msg = createProject();
+                    case 7 -> msg = addMember();
+                    case 8 -> msg = showMember();
+                    case 9 -> msg = showProjectCards();
+                    case 10 -> msg = showCard();
+                    case 11 -> msg = addCard();
+                    case 12 -> msg = moveCard();
+                    case 13 -> msg = getCardHistory();
+                    case 14, 15 -> {
+                        System.err.println("Non supportata.");
+                        break;
+                    }
+                    case 16 -> msg = cancelProject();
+                    case 17 -> {
+                        exit = true;
+                        msg = closeConnection();
+                    }
+                    default -> {
+                        System.out.println("Scelta non valida.");
+                        break;
+                    }
+                }
+                if (msg != null) {
+                    sendMessage(msg);
+                    if (!msg.getOperationCode().equals(OP_CODE.CLOSE_CONNECTION) && !msg.getOperationCode().equals(OP_CODE.LOGOUT))
+                        rispostaServer();
+                }
+
+            }
+            try {
+                System.out.println("Chiudo Socket");
+                scanner.close();
+                clientSocket.close();
+                readerIn.close();
+                writerOut.close();
+                serverInterface.unregisterForCallback(stub);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        //Thread.currentThread().interrupt();
+    }
+    /*public Client(String testFileName) throws FileNotFoundException {
         if (testFileName != null) {
             System.setIn(new FileInputStream(new File(testFileName)));
         }
@@ -70,9 +198,9 @@ public class Client extends Thread {
         }
 
 
-    }
+    }*/
 
-    public void run() {
+    /*public void run() {
         int operazione = -1;
         boolean exit = false;
         printWelcomeMenu();
@@ -95,7 +223,7 @@ public class Client extends Thread {
         if (!exit) {
             System.out.println("Client: connesso al server.");
 
-            /*switch (operazione) {
+            *//*switch (operazione) {
                 case 1 -> register();
                 case 2 -> login();
                 case 3 -> exit = true;
@@ -103,7 +231,7 @@ public class Client extends Thread {
                     System.out.println("Scelta non valida."); // TODO: 26/01/21 farlo riprovare 
                     exit = true;
                 }
-            }*/
+            }*//*
             //aspettaRispostaServer();
 
             while (!exit) {
@@ -161,9 +289,9 @@ public class Client extends Thread {
             }
         }
     }
+*/
 
-
-    private boolean openConnection() {
+    private static boolean openConnection() {
         try { //Prova a connettersi al server.
             clientSocket.connect(new InetSocketAddress(InetAddress.getLocalHost(), ServerSettings.SERVER_PORT));
             readerIn = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
@@ -181,7 +309,7 @@ public class Client extends Thread {
         return true;
     }
 
-    private void sendMessage(Message msg) {
+    private static void sendMessage(Message msg) {
         try {
             writerOut.write(gson.toJson(msg) + "\n");
             writerOut.write(ServerSettings.MESSAGE_TERMINATION_CODE + "\n");
@@ -191,7 +319,7 @@ public class Client extends Thread {
         }
     }
 
-    private void rispostaServer() {
+    private static void rispostaServer() {
         String message = "", read = "";
         boolean end = false;
         // TODO: 26/01/21 Capire come gestire questo while
@@ -227,16 +355,16 @@ public class Client extends Thread {
 
 
     // -------- METODI PRIVATI ---------
-    private void printWelcomeMenu() {
+    private static void printWelcomeMenu() {
         System.out.println("Scegli operazione:\n 1. Registra Utente.\n 2. Login Utente.\n 3. Annulla e Esci.");
     }
 
-    private int scegliOperazione() {
+    private static int scegliOperazione() {
         System.out.print("Inserisci numero operazione e premi invio: ");
         return scanner.nextInt();
     }
 
-    private void printOperationMenu() {
+    private static void printOperationMenu() {
         System.out.println("Scegli operazione:" +
                 "\n 1.  Login Utente," +
                 "\n 2.  Logout Utente," +
@@ -260,7 +388,7 @@ public class Client extends Thread {
     //------ POSSIBILI OPERAZIONI ------
 
     // TODO: 27/01/21 cambiare ritorno
-    private boolean register() {
+    private static boolean register() {
         System.out.print("Scegli uno Username:");
         nickname = scanner.next();
         System.out.print("Scegli una Password:");
@@ -270,7 +398,7 @@ public class Client extends Thread {
             // TODO: 08/02/21 callback deve essere registrato dopo ma deve essere comunque inviato
             serverInterface.registerForCallback(stub);
             answer_code = serverObj.register(nickname, password);
-            System.err.println("Ricevuto "+answer_code);
+            System.err.println("Ricevuto " + answer_code);
         } catch (RemoteException e) {
             e.printStackTrace();
         }
@@ -280,7 +408,7 @@ public class Client extends Thread {
         return false;
     }
 
-    private Message login() {
+    private static Message login() {
         System.out.print("Username:");
         nickname = scanner.next();
         System.out.print("Password:");
@@ -288,30 +416,30 @@ public class Client extends Thread {
         return new Message(nickname, password, OP_CODE.LOGIN, null, null, null);
     }
 
-    private Message logout() {
+    private static Message logout() {
         return new Message(nickname, null, OP_CODE.LOGOUT, null, null, null);
     }
 
-    private Message listUsers() {
+    private static Message listUsers() {
         return new Message(nickname, null, OP_CODE.LIST_USER, null, null, null);
     }
 
-    private Message listOnlineUsers() {
+    private static Message listOnlineUsers() {
         return new Message(nickname, null, OP_CODE.LIST_ONLINE_USER, null, null, null);
     }
 
-    private Message listProjects() {
+    private static Message listProjects() {
         return new Message(nickname, null, OP_CODE.LIST_PROJECTS, null, null, null);
     }
 
-    private Message createProject() {
+    private static Message createProject() {
         String projectTitle;
         System.out.print("Inserire il nome del Progetto:");
         projectTitle = scanner.next();
         return new Message(nickname, null, OP_CODE.CREATE_PROJECT, projectTitle, null, null);
     }
 
-    private Message addMember() {
+    private static Message addMember() {
         String projectTitle, user;
         System.out.print("Inserire il nome del Progetto:");
         projectTitle = scanner.next();
@@ -320,21 +448,21 @@ public class Client extends Thread {
         return new Message(nickname, user, OP_CODE.ADD_MEMBER, projectTitle, null, null);
     }
 
-    private Message showMember() {
+    private static Message showMember() {
         String projectTitle;
         System.out.print("Inserire il nome del Progetto:");
         projectTitle = scanner.next();
         return new Message(nickname, null, OP_CODE.SHOW_MEMBERS, projectTitle, null, null);
     }
 
-    private Message showProjectCards() {
+    private static Message showProjectCards() {
         String projectTitle;
         System.out.print("Inserire il nome del Progetto:");
         projectTitle = scanner.next();
         return new Message(nickname, null, OP_CODE.SHOW_PROJECT_CARDS, projectTitle, null, null);
     }
 
-    private Message showCard() {
+    private static Message showCard() {
         String projectTitle, card;
         System.out.print("Inserire il nome del Progetto:");
         projectTitle = scanner.next();
@@ -343,7 +471,7 @@ public class Client extends Thread {
         return new Message(nickname, null, OP_CODE.SHOW_CARD, projectTitle, card, null);
     }
 
-    private Message addCard() {
+    private static Message addCard() {
         String projectTitle, card, desc;
         System.out.print("Inserire il nome del Progetto:");
         projectTitle = scanner.next();
@@ -354,7 +482,7 @@ public class Client extends Thread {
         return new Message(nickname, desc, OP_CODE.ADD_CARD, projectTitle, card, null);
     }
 
-    private Message moveCard() {
+    private static Message moveCard() {
         String projectTitle, card, extra;
         System.out.print("Inserire il nome del Progetto:");
         projectTitle = scanner.next();
@@ -368,7 +496,7 @@ public class Client extends Thread {
         return new Message(nickname, extra, OP_CODE.MOVE_CARD, projectTitle, card, null);
     }
 
-    private Message getCardHistory() {
+    private static Message getCardHistory() {
         String projectTitle, card, list;
         System.out.print("Inserire il nome del Progetto:");
         projectTitle = scanner.next();
@@ -379,7 +507,7 @@ public class Client extends Thread {
         return new Message(nickname, list, OP_CODE.GET_CARD_HISTORY, projectTitle, card, null);
     }
 
-    private Message cancelProject() {
+    private static Message cancelProject() {
         String projectTitle;
         System.out.print("Inserire il nome del Progetto:");
         projectTitle = scanner.next();
@@ -387,7 +515,7 @@ public class Client extends Thread {
     }
 
     // TODO: 26/01/21 Chiusura in caso di errore
-    private Message closeConnection() {
+    private static Message closeConnection() {
         return new Message(nickname, null, OP_CODE.CLOSE_CONNECTION, null, null, null);
     }
 }
