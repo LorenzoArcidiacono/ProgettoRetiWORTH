@@ -30,7 +30,7 @@ public class Task extends Thread {
             e.printStackTrace();
             return;
         }
-        if (message == null) {
+        if (message == null) { //in caso di errore di lettura ritorna
             return;
         }
         System.out.println("Messaggio letto dal Task: " + message);
@@ -114,6 +114,7 @@ public class Task extends Thread {
                 string = null;
             }
         }
+        // se l'operazione richiede una risposta la invia
         if (message.getOperationCode() != OP_CODE.CLOSE_CONNECTION && message.getOperationCode() != OP_CODE.LOGOUT) {
             message.setAnswer(answer_code, string);
             try {
@@ -123,17 +124,25 @@ public class Task extends Thread {
             }
             System.out.println(message.toString());
         }
-        //Segno pronto a mandare una nuova richiesta
+        //setta la connessione per una nuova op
         connection.setInUse(false);
         // TODO: 21/01/21 invio risposta al mittente
     }
 
+
+    /*
+     * EFFECTS: Invia un messaggio in risposta alla operazione svolta
+    */
     private void sendAnswer() throws IOException {
         connection.getWriter().write(gson.toJson(message)+"\n");
         connection.getWriter().write(ServerSettings.MESSAGE_TERMINATION_CODE+"\n");
         connection.getWriter().flush();
     }
 
+
+    /*
+     * EFFECTS: legge il messaggio inviato dal client
+    */
     private void readMessage() throws IOException {
         String connectionMessage, read = "";
         boolean end = false;

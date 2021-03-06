@@ -8,14 +8,24 @@ import com.google.gson.GsonBuilder;
 
 import java.io.*;
 import java.net.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.rmi.AlreadyBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import static com.github.arci0066.worth.server.ServerSettings.serverBackupDirPath;
 
 public class Server {
 
@@ -38,10 +48,23 @@ public class Server {
                 .create();
 
         //Inizializza gli oggetti
-        projectsList = ProjectsList.getSingletonInstance();
-        registeredUsersList = UsersList.getSingletonInstance();
+        //projectsList = ProjectsList.getSingletonInstance();
+        //registeredUsersList = UsersList.getSingletonInstance();
         socketList = SocketList.getSingletonInstance();
         pool = new ThreadPoolExecutor(ServerSettings.MIN_THREAD_NUMBER, ServerSettings.MAX_THREAD_NUMBER, ServerSettings.THREAD_KEEP_ALIVE_TIME, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>());
+
+        //Creo la directory in cui salvo i progetti e, se esiste, leggo la lista degli utenti registrati
+        Path path = Paths.get(serverBackupDirPath);
+        try {
+            Files.createDirectories(path);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        System.out.println(path);
+
+        readServerBackup(path);
+
+        //Lancio il thread Leader
         leader = new Leader(pool);
         leader.start();
 
@@ -66,9 +89,9 @@ public class Server {
             LocateRegistry.createRegistry(ServerSettings.REGISTRY_PORT);
             Registry registry = LocateRegistry.getRegistry(ServerSettings.REGISTRY_PORT);
 // TODO: 27/01/21 pulire il tutto e capire se posso effettivamente mandarlo nel RemoteRegistration 
-            ServerRMI stub2 = (ServerRMI) UnicastRemoteObject.exportObject (server,0);
+            ServerRMI stub2 = (ServerRMI) UnicastRemoteObject.exportObject(server, 0);
             String name = "SERVER";
-            registry.rebind (name, stub2);
+            registry.rebind(name, stub2);
 
             rmi = new RemoteRegistration(server);
             RemoteRegistrationInterface stub = (RemoteRegistrationInterface) UnicastRemoteObject.exportObject(rmi, 0);
@@ -76,7 +99,6 @@ public class Server {
         } catch (RemoteException e) {
             e.printStackTrace();
         }
-
 
         // Prepara un Thread di pulizia da lanciare prima della chiusura
         Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
@@ -91,6 +113,7 @@ public class Server {
                 }
             }
         }, "Shutdown-thread"));
+
 
         //Ciclo principale
         while (!exit) {
@@ -107,33 +130,53 @@ public class Server {
                 }
                 System.out.println(socketList);
 
-                /*int numMessages = 0; //Per stampare quanti messagi ha mandato un utente
-                while (!client.isClosed()) {
-                    Message msg = null;
-                    String message, read = "";
-
-                    while ((message = reader.readLine()) != null) { // TODO: 25/01/21 Capire se manda più messaggi che fare
-                        read += message;
-                        numMessages++;
-                        msg = gson.fromJson(read, Message.class);
-                        System.out.println("\n@ Client send " + numMessages + ": " + msg + "\n");
-                        break;
-                    }
-
-                    if (msg != null) {
-                        msg.setAnswer(ANSWER_CODE.OP_OK, null);
-                        writer.write(gson.toJson(msg));
-                        writer.write("\n");
-                        writer.flush();
-                    } else { //Caso in cui l'utente abbia chiuso la comunicazione
-                        System.out.println("@ Utente: " + client.getRemoteSocketAddress() + " chiuso.");
-                        client.close();
-                        reader.close();
-                        writer.close();
-                    }*/
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
+    }
+
+    private static void readServerBackup(Path path) {
+        UsersList registeredUsersList;
+        ProjectsList projectsList = null;
+
+        //Leggo il backup della lista utenti registrati
+        String usersData = readFile(path + "/Users.txt"); // TODO: 04/03/21 scrivere il nome del file in setting
+        if (usersData != null) {
+            String[] users = usersData.split(ServerSettings.usersDivider); //Divido i nomi e password dei singoli utenti e passo l'array al costruttore
+            registeredUsersList = UsersList.getSingletonInstance(users);
+        }
+
+        //Leggo il backup dei progetti
+        List<Path> result = null;
+        try (Stream<Path> paths = Files.walk(Paths.get(serverBackupDirPath),1)) {
+            result = paths.filter(Files::isDirectory)
+                    .collect(Collectors.toList());
+            result.remove(Paths.get(serverBackupDirPath));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        System.out.println(result);
+       /* for (Path proj: result) {
+            String pName = proj.toString().replaceAll(serverBackupDirPath+"/","");
+            System.out.println(pName);
+        }*/
+        projectsList = ProjectsList.getSingletonInstance(result);
+        System.out.println(projectsList.getProjectsTitle());
+    }
+
+    // TODO: 04/03/21 string ha una dimensione massima, cambiare con String[]? per file lunghi 
+    private static String readFile(String filePath) {
+        Path path = Paths.get(filePath);
+        String str = "";
+        String line = "";
+        try (BufferedReader reader = Files.newBufferedReader(path)){
+            while ((line = reader.readLine()) != null)
+                str += line;
+        } catch (IOException e) {
+            System.err.println("File " + filePath + " non esiste.");
+            return null;
+        }
+        return str;
     }
 }

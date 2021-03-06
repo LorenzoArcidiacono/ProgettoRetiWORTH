@@ -1,8 +1,17 @@
 package com.github.arci0066.worth.server;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.annotations.Expose;
+import com.google.gson.reflect.TypeToken;
 
+import java.io.BufferedWriter;
+import java.io.IOException;
 import java.io.Serializable;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -22,6 +31,16 @@ public class UsersList {
         lock = new ReentrantReadWriteLock();
     }
 
+    private UsersList(String[] usersString) {
+        lock = new ReentrantReadWriteLock();
+        usersList = new ArrayList<>();
+        String[] userData = null;
+        for (String stringPart : usersString) {
+            userData = stringPart.split(ServerSettings.usersDataDivider); //Separo nickname e password
+            usersList.add(new User(userData[0], userData[1], true));
+        }
+    }
+
     // ------ Getters -------
     /* Doppio controllo per evitare che troppi Thread aspettino la mutex,
      * secondo controllo per casi in cui un thread si blocchi nell' if prima di completare
@@ -31,6 +50,16 @@ public class UsersList {
             synchronized (UsersList.class) {
                 if (instance == null)
                     instance = new UsersList();
+            }
+        }
+        return instance;
+    }
+
+    public static UsersList getSingletonInstance(String[] usersString) {
+        if (instance == null) {
+            synchronized (UsersList.class) {
+                if (instance == null)
+                    instance = new UsersList(usersString);
             }
         }
         return instance;
@@ -91,9 +120,24 @@ public class UsersList {
 
     @Override
     public String toString() {
-        return "UsersList{" +
-                "usersList=" + usersList.toString() +
+        return "UsersList{" + usersList.toString() +
                 '}';
     }
 
+    public void saveAll() {
+        Path path = Paths.get(ServerSettings.serverBackupDirPath + "/Users.txt");
+        lock.readLock().lock();
+        try (BufferedWriter writer = Files.newBufferedWriter(path, Charset.forName("UTF-8"))) {
+            for (User user : usersList) {
+                writer.write(user.getNickname() + ServerSettings.usersDataDivider + user.getPassword() + "\n" + ServerSettings.usersDivider);
+                /*writer.write("Name:"+user.getNickname()+"\n");
+                writer.write("Password:"+user.getPassword()+"\n");
+                writer.write("@\n");*/
+            }
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
 }

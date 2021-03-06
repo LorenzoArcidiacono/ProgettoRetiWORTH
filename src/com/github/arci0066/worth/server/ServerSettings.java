@@ -5,7 +5,14 @@ public class ServerSettings {
     public static final int MAX_THREAD_NUMBER = 10;
     public static final long THREAD_KEEP_ALIVE_TIME = 60L;
 
-    public static final int maxUnsavedOperation = 10;
+    public static final int maxUnsavedOperation = 5;
+    public static final String serverBackupDirPath = "./extra/Server_Backup";
+    public static final String projectUsersBackupFile = "/projectUsers.txt";
+
+    // TODO: 04/03/21 impedire che l'utente usi nomi o pwd con : e , o cambiare uso 
+    // TODO: 04/03/21 sembra che : e , non saranno mai usati del encoder https://www.base64decode.org/
+    public static final String usersDivider = ":";
+    public static final String usersDataDivider = ",";
 
     public static final int SERVER_PORT = 65535;
 

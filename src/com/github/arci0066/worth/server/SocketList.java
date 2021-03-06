@@ -8,6 +8,7 @@ import java.util.Iterator;
 import java.util.List;
 
 /*CLASSE SINGLETON && THREAD SAFE*/
+// TODO: 01/03/21 farla diventare thread safe o capire se serve che lo sia
 public class SocketList implements Iterable<Connection>{
     private static SocketList instance;
     private List<Connection> connectionsList;
@@ -55,7 +56,7 @@ public class SocketList implements Iterable<Connection>{
     }
 
     @Override
-    // TODO: 26/01/21 controllare che si faccia così 
+    // TODO: 26/01/21 controllare che si faccia così e che sia thread safe
     public Iterator<Connection> iterator() {
         return connectionsList.iterator();
     }

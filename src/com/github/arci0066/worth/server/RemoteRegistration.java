@@ -34,7 +34,7 @@ public class RemoteRegistration extends RemoteServer implements RemoteRegistrati
         System.out.println("REGISTER " + usersList.toString());
         if (userNIckname != null && password != null) {
             if (usersList.findUser(userNIckname) == null) {
-                User user = new User(userNIckname, password);
+                User user = new User(userNIckname, password,false);
                 user.login();
                 usersList.add(user);
                 String gsonUserList;

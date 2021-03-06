@@ -1,10 +1,10 @@
 package com.github.arci0066.worth.server;
 
 import com.github.arci0066.worth.enumeration.USER_STATUS;
-import com.github.arci0066.worth.interfaces.ServerRMI;
 import com.google.gson.annotations.Expose;
 
-import java.io.Serializable;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -13,6 +13,7 @@ public class User {
     @Expose
     private String nickname;
     private String password;
+    private String encPwd; //password criptata per poter essere salvata in memoria
     @Expose
     private USER_STATUS userStatus;
     private ReadWriteLock lock;
@@ -20,12 +21,28 @@ public class User {
 
 // ------ Constructors ------
 
-    public User(String nickname, String password) {
+    /*public User(String nickname, String password) {
         this.nickname = nickname;
         this.password = password;
+        encPwd = encryptPassword();
+        userStatus = USER_STATUS.OFFLINE;
+        lock = new ReentrantReadWriteLock();
+    }*/
+
+    public User(String nickname, String password, boolean encrypted) {
+        this.nickname = nickname;
+        if(encrypted) {
+            this.encPwd = password;
+            this.password = decryptPassword();
+        }
+        else{
+            this.password = password;
+            this.encPwd = encryptPassword();
+        }
         userStatus = USER_STATUS.OFFLINE;
         lock = new ReentrantReadWriteLock();
     }
+
 
     // ------ Getters -------
     public String getNickname() {
@@ -39,7 +56,18 @@ public class User {
         return str;
     }
 
-// ------ Setters -------
+    public String getPassword() {
+        String str;
+        lock.readLock().lock();
+        try {
+            str = encPwd;
+        } finally {
+            lock.readLock().unlock();
+        }
+        return str;
+    }
+
+    // ------ Setters -------
 
     public void login() {
         lock.writeLock().lock();
@@ -82,6 +110,15 @@ public class User {
         return answer;
     }
 
+    private String encryptPassword() {
+        encPwd = Base64.getEncoder().encodeToString(password.getBytes(StandardCharsets.UTF_8));
+        return encPwd;
+    }
+
+    private String decryptPassword() {
+        return new String( Base64.getDecoder().decode(encPwd));
+    }
+
     @Override
     public String toString() {
         String str;
@@ -96,4 +133,6 @@ public class User {
         }
         return str;
     }
+
+   
 }
