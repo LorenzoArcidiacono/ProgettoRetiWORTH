@@ -1,9 +1,14 @@
 package com.github.arci0066.worth.server;
 
-public class BackupTask extends Thread{
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ObjectOutputStream;
+
+public class BackupTask extends Thread {
     private ProjectsList projectsList;
-    private  UsersList usersList;
-    
+    private UsersList usersList;
+
 // ------ Constructors ------
 
     public BackupTask() {
@@ -14,7 +19,10 @@ public class BackupTask extends Thread{
     @Override
     public void run() {
         System.out.println("Salvo tutto!");
+//        Serializzazioni
+        usersList.serialize();
+        projectsList.serialize();
+//        Salva i progetti singolarmente in cartelle
         projectsList.saveAll();
-        usersList.saveAll();
     }
 }

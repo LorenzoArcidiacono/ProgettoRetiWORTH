@@ -1,8 +1,6 @@
 package com.github.arci0066.worth.server;
 
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -17,10 +15,12 @@ import static com.github.arci0066.worth.server.ServerSettings.projectUsersBackup
 import static com.github.arci0066.worth.server.ServerSettings.serverBackupDirPath;
 
 /*CLASSE SINGLETON && THREAD SAFE*/
-public class ProjectsList {
+public class ProjectsList implements Serializable {
+    @Serial
+    private static final long serialVersionUID = 1;
     private static ProjectsList instance;
     private List<Project> projectsList;
-    ReadWriteLock lock;
+    transient ReadWriteLock lock;
 
 // ------ Constructors ------
 
@@ -29,12 +29,11 @@ public class ProjectsList {
         lock = new ReentrantReadWriteLock();
     }
 
-    private ProjectsList(List<Path> paths) {
-        projectsList = new ArrayList<>();
+    private ProjectsList(List<Project> projects) {
         lock = new ReentrantReadWriteLock();
-        for (Path path: paths) {
-            String projectName = path.toString().replaceAll(serverBackupDirPath+"/","");
-            projectsList.add(new Project(path));
+        projectsList = projects;
+        for (Project p : projectsList) {
+            p.resetProject();
         }
     }
 
@@ -52,11 +51,11 @@ public class ProjectsList {
         return instance;
     }
 
-    public static ProjectsList getSingletonInstance(List<Path> paths) {
+    public static ProjectsList getSingletonInstance(List<Project> projects) {
         if (instance == null) {
             synchronized (ProjectsList.class) {
                 if (instance == null)
-                    instance = new ProjectsList(paths);
+                    instance = new ProjectsList(projects);
             }
         }
         return instance;
@@ -65,7 +64,7 @@ public class ProjectsList {
 
     /*
      * RETURN: una stringa con i titoli di tutti i progetti
-    */
+     */
     public String getProjectsTitle() {
         String str = "Progetti:";
         lock.readLock().lock();
@@ -85,7 +84,7 @@ public class ProjectsList {
     /*
      * REQUIRES: project != null
      * EFFECTS: aggiunge il progetto alla lista se questo non è esistente ( Nota. tutti i controlli sono fatti dal chiamante )
-    */
+     */
     public void add(Project project) {
         lock.writeLock().lock();
         try {
@@ -113,7 +112,7 @@ public class ProjectsList {
      * REQUIRES: projectTitle != null
      * EFFECTS: restituisce il progetto con titolo projectTitle se esite
      * RETURN: project tale che project.getProjectTitle == projectTitle, null altrimenti
-    */
+     */
     public Project findProject(String projectTitle) {
         Project project = null;
 
@@ -129,26 +128,37 @@ public class ProjectsList {
         return project;
     }
 
+    public void serialize() {
+        lock.readLock().lock();
+        try (FileOutputStream fos = new FileOutputStream(ServerSettings.serverBackupDirPath + "/Projects");
+             ObjectOutputStream out = new ObjectOutputStream(fos);) {
+            out.writeObject(projectsList);
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
 
     /*
      * EFFECTS: salva in memoria la lista dei progetti: una cartella per ogni progetto, un file per ogni card
-    */
+     */
     public void saveAll() {
         lock.readLock().lock();
         try {
-            for (Project prj: projectsList) {
+            for (Project prj : projectsList) {
                 // per ogni progetto crea una cartella e salva le card nella cartella
-                Path path = Paths.get(serverBackupDirPath+"/"+prj.getProjectTitle());
+                Path path = Paths.get(serverBackupDirPath + "/" + prj.getProjectTitle());
                 Files.createDirectories(path);
                 prj.saveCard(path);
-                Path userListPath = Paths.get(path+projectUsersBackupFile);
+                Path userListPath = Paths.get(path + projectUsersBackupFile);
                 prj.saveUsersList(userListPath);
             }
         } catch (IOException e) {
             e.printStackTrace();
-        }
-        finally {
+        } finally {
             lock.readLock().unlock();
         }
     }
 }
+

@@ -5,9 +5,7 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.annotations.Expose;
 import com.google.gson.reflect.TypeToken;
 
-import java.io.BufferedWriter;
-import java.io.IOException;
-import java.io.Serializable;
+import java.io.*;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -17,11 +15,13 @@ import java.util.List;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-public class UsersList {
+public class UsersList implements Serializable{
+    @Serial
+    private static final long serialVersionUID = 1;
+
     private static UsersList instance;
-    @Expose
     List<User> usersList;
-    ReadWriteLock lock;
+    transient ReadWriteLock lock;
 
 
 // ------ Constructors ------
@@ -31,13 +31,11 @@ public class UsersList {
         lock = new ReentrantReadWriteLock();
     }
 
-    private UsersList(String[] usersString) {
+    private UsersList(List<User> oldUserList) {
         lock = new ReentrantReadWriteLock();
-        usersList = new ArrayList<>();
-        String[] userData = null;
-        for (String stringPart : usersString) {
-            userData = stringPart.split(ServerSettings.usersDataDivider); //Separo nickname e password
-            usersList.add(new User(userData[0], userData[1], true));
+        usersList = oldUserList;
+        for (User u : usersList) {
+            u.resetUser();
         }
     }
 
@@ -55,11 +53,11 @@ public class UsersList {
         return instance;
     }
 
-    public static UsersList getSingletonInstance(String[] usersString) {
+    public static UsersList getSingletonInstance(List<User> usersList) {
         if (instance == null) {
             synchronized (UsersList.class) {
                 if (instance == null)
-                    instance = new UsersList(usersString);
+                    instance = new UsersList(usersList);
             }
         }
         return instance;
@@ -139,5 +137,13 @@ public class UsersList {
         } finally {
             lock.readLock().unlock();
         }
+    }
+
+    public void serialize() {
+        try(FileOutputStream fos = new FileOutputStream(ServerSettings.serverBackupDirPath + "/Users");
+            ObjectOutputStream out = new ObjectOutputStream(fos);) {
+            out.writeObject(usersList);
+        }
+        catch(IOException ex) {ex.printStackTrace();}
     }
 }

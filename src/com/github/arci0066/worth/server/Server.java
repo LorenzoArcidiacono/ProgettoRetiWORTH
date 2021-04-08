@@ -137,32 +137,47 @@ public class Server {
     }
 
     private static void readServerBackup(Path path) {
-        UsersList registeredUsersList;
+        List<User> registeredUsersList = null;
+        UsersList usersList = null;
+
+        List<Project> oldProjectsList = null;
         ProjectsList projectsList = null;
 
         //Leggo il backup della lista utenti registrati
-        String usersData = readFile(path + "/Users.txt"); // TODO: 04/03/21 scrivere il nome del file in setting
-        if (usersData != null) {
-            String[] users = usersData.split(ServerSettings.usersDivider); //Divido i nomi e password dei singoli utenti e passo l'array al costruttore
-            registeredUsersList = UsersList.getSingletonInstance(users);
+        try(FileInputStream fis = new FileInputStream(serverBackupDirPath+"/Users");
+            ObjectInputStream in = new ObjectInputStream(fis)) {
+            registeredUsersList = (List<User>) in.readObject();
+            usersList = UsersList.getSingletonInstance(registeredUsersList);
+            System.out.println(usersList.getUsersNickname());
+            System.out.println(usersList.getOnlineUsersNickname());
+        }
+        catch (FileNotFoundException e){
+            System.err.println("Nessun file di backup trovato.");
+        }
+        catch(IOException ex) {
+            ex.printStackTrace();
+        }
+        catch(ClassNotFoundException ex) {
+            ex.printStackTrace();
         }
 
+
         //Leggo il backup dei progetti
-        List<Path> result = null;
-        try (Stream<Path> paths = Files.walk(Paths.get(serverBackupDirPath),1)) {
-            result = paths.filter(Files::isDirectory)
-                    .collect(Collectors.toList());
-            result.remove(Paths.get(serverBackupDirPath));
-        } catch (IOException e) {
-            e.printStackTrace();
+        try(FileInputStream fis = new FileInputStream(serverBackupDirPath+"/Projects");
+            ObjectInputStream in = new ObjectInputStream(fis)) {
+            oldProjectsList = (List<Project>) in.readObject();
+            projectsList = ProjectsList.getSingletonInstance(oldProjectsList);
+            System.out.println(projectsList.getProjectsTitle());
         }
-        System.out.println(result);
-       /* for (Path proj: result) {
-            String pName = proj.toString().replaceAll(serverBackupDirPath+"/","");
-            System.out.println(pName);
-        }*/
-        projectsList = ProjectsList.getSingletonInstance(result);
-        System.out.println(projectsList.getProjectsTitle());
+        catch (FileNotFoundException e){
+            System.err.println("Nessun file di backup trovato.");
+        }
+        catch(IOException ex) {
+            ex.printStackTrace();
+        }
+        catch(ClassNotFoundException ex) {
+            ex.printStackTrace();
+        }
     }
 
     // TODO: 04/03/21 string ha una dimensione massima, cambiare con String[]? per file lunghi 

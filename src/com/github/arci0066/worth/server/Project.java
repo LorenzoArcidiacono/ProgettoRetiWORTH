@@ -4,29 +4,33 @@ import com.github.arci0066.worth.enumeration.*;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.IOException;
+import java.io.*;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static com.github.arci0066.worth.server.ServerSettings.projectUsersBackupFile;
 import static com.github.arci0066.worth.server.ServerSettings.serverBackupDirPath;
 
 //CLASSE THREAD SAFE
-public class Project implements com.github.arci0066.worth.interfaces.ProjectInterface {
+public class Project implements Serializable {
+    @Serial
+    private static final long serialVersionUID = 1;
+
     private static final String UTENTE_ERRATO = "Utente non membro del progetto.";
 
     private String projectTitle;
     private List<Card> todoList, inProgressList, toBeRevisedList, doneList;
     private List<String> projectUsers;
-    private ReadWriteLock lock;
+    transient private ReadWriteLock lock;
 
     //Come la implemento?
     // TODO: 12/01/21  private Chat projectChat;
@@ -50,6 +54,7 @@ public class Project implements com.github.arci0066.worth.interfaces.ProjectInte
         Gson gson = new Gson();
         projectTitle = path.toString().replaceAll(serverBackupDirPath+"/","");
 
+//          leggo la lista degli utenti del progetto
         try (BufferedReader reader = Files.newBufferedReader(nicknamePath)){
             String line;
             while ((line = reader.readLine()) != null)
@@ -57,19 +62,50 @@ public class Project implements com.github.arci0066.worth.interfaces.ProjectInte
         } catch (IOException e) {
             e.printStackTrace();
         }
-
         projectUsers = gson.fromJson(usersNickname,new TypeToken<List<String>>() {}.getType());
         System.err.println(projectUsers);
 
+//        aggiungo le cards
         todoList = new ArrayList<>();
         inProgressList = new ArrayList<>();
         toBeRevisedList = new ArrayList<>();
         doneList = new ArrayList<>();
         lock = new ReentrantReadWriteLock();
+
+        File[] result = null;
+        File dir = new File(String.valueOf(path));
+        // questo filtro permette di selezionare solo i file .txt
+        // TODO: 31/03/21 salvare i file in .crd?
+        FilenameFilter filter = new FilenameFilter() {
+            @Override
+            public boolean accept(File f, String name) {
+                return name.endsWith(".txt");
+            }
+        };
+        result = dir.listFiles(filter);
+        if (result != null) {
+            for (File f: result) {
+                //controllo che non sia il file degli utenti
+                String namePath = "/"+f.getName();
+                if(!namePath.contains(projectUsersBackupFile)){
+                    String cardFile = "";
+                    try (BufferedReader reader = new BufferedReader(new FileReader(f))){
+                        String line;
+                        while ((line = reader.readLine()) != null)
+                            cardFile += line;
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                    String[] str = cardFile.split("%");
+                    for (String s: str) {
+                        System.out.println("-"+s);
+                    }
+                }
+            }
+        }
     }
 
     // ------ Getters -------
-    @Override
     public String getProjectTitle() {
         String str;
         lock.readLock().lock();
@@ -81,7 +117,6 @@ public class Project implements com.github.arci0066.worth.interfaces.ProjectInte
         return str;
     }
 
-    @Override
     public String getProjectUsers(String userNickname) {
         String str;
         if (isUserRegisteredToProject(userNickname)) {
@@ -101,7 +136,6 @@ public class Project implements com.github.arci0066.worth.interfaces.ProjectInte
      * RETURN: restituisce la card con titolo = cardTitle, null altrimenti
      */
     // TODO: 14/01/21 passare una copia? una stringa?
-    @Override
     public Card getCard(String cardTitle, String cardStatus, String userNickname) {
         Card card = null;
         if (isUserRegisteredToProject(userNickname)){
@@ -115,7 +149,6 @@ public class Project implements com.github.arci0066.worth.interfaces.ProjectInte
         return card;
     }
 
-    @Override
     public String getCardHistory(String cardTitle, String cardStatus, String userNickname) {
         String answer;
         lock.readLock().lock();
@@ -136,7 +169,6 @@ public class Project implements com.github.arci0066.worth.interfaces.ProjectInte
      * 			|| PERMISSION_DENIED se l'utente non è registrato al progetto
      * 			|| OP_FAIL in caso di errore.
      */
-    @Override
     public ANSWER_CODE addCard(String cardTitle, String cardDescription, String userNickname) {
         if (!isUserRegisteredToProject(userNickname))
             return ANSWER_CODE.PERMISSION_DENIED;
@@ -166,7 +198,6 @@ public class Project implements com.github.arci0066.worth.interfaces.ProjectInte
      * 			|| PERMISSION_DENIED se l'utente non è registrato al progetto,
      * 			|| OP_FAIL in caso di altro errore.
      * */
-    @Override
     public ANSWER_CODE moveCard(String cardTitle, String fromListTitle, String toListTitle, String userNickname) {
         CARD_STATUS fromStatus = getStatus(fromListTitle);
         CARD_STATUS toStatus = getStatus(toListTitle);
@@ -212,7 +243,6 @@ public class Project implements com.github.arci0066.worth.interfaces.ProjectInte
      *			|| PERMISSION_DENIED se l'utente oldUserNickname non è registrato al progetto,
      *			|| OP_FAIL altrimenti.
      */
-    @Override
     public ANSWER_CODE addUser(String oldUserNickname, String newUserNickname) {
         if (!isUserRegisteredToProject(oldUserNickname))
             return ANSWER_CODE.PERMISSION_DENIED;
@@ -239,7 +269,6 @@ public class Project implements com.github.arci0066.worth.interfaces.ProjectInte
      *          || PERMISSIONE_DENIED se l'utente non è registrato al progetto
      *          || PROJECT_NOT_FINISHED se ci sono card | card.getCardStatus != DONE
     */
-    @Override
     public ANSWER_CODE cancelProject(String userNickname) {
         if (!isUserRegisteredToProject(userNickname))
             return ANSWER_CODE.PERMISSION_DENIED;
@@ -265,7 +294,6 @@ public class Project implements com.github.arci0066.worth.interfaces.ProjectInte
      * RETURN: una stringa conentente tutte le card del progetto suddivise nelle liste in assenza di errori
      *          || PERMISSION_DENIED altrimenti
     */
-    @Override
     public String showCards(String userNickname) {
         String answer;
         if (isUserRegisteredToProject(userNickname)) {
@@ -292,7 +320,6 @@ public class Project implements com.github.arci0066.worth.interfaces.ProjectInte
      * RETURN: La stringa creata.
      */
     // TODO: 14/01/21 se non registrato non dovrebbe vedere la lista degli utenti
-    @Override
     public String prettyPrint(String userNickname) {
         String str;
         lock.readLock().lock();
@@ -425,17 +452,16 @@ public class Project implements com.github.arci0066.worth.interfaces.ProjectInte
         } finally {
             lock.readLock().unlock();
         }
-
     }
 
     private void backupCard(Path path, Card crd) {
         Path cardPath;
         cardPath = Paths.get(path +"/"+ crd.getCardTitle()+".txt");
         try(BufferedWriter writer = Files.newBufferedWriter(cardPath, Charset.forName("UTF-8"))){
-            writer.write("Title:"+ crd.getCardTitle()+"\n");
-            writer.write("Description:"+ crd.getCardDescription()+"\n");
-            writer.write("List:"+ crd.getCardStatus()+"\n");
-            writer.write(crd.getCardHistory()+"\n");
+            writer.write("%Title:"+ crd.getCardTitle()+"\n");
+            writer.write("%Description:"+ crd.getCardDescription()+"\n");
+            writer.write("%List:"+ crd.getCardStatus()+"\n");
+            writer.write("%"+crd.getCardHistory()+"\n");
         }catch(IOException ex){
             ex.printStackTrace();
         }
@@ -450,5 +476,9 @@ public class Project implements com.github.arci0066.worth.interfaces.ProjectInte
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    public void resetProject() {
+        lock = new ReentrantReadWriteLock();
     }
 }

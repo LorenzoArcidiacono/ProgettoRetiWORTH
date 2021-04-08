@@ -3,20 +3,23 @@ package com.github.arci0066.worth.server;
 import com.github.arci0066.worth.enumeration.USER_STATUS;
 import com.google.gson.annotations.Expose;
 
+import java.io.Serial;
+import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /*CLASSE THREAD SAFE*/
-public class User {
-    @Expose
+public class User implements Serializable {
+    @Serial
+    private static final long serialVersionUID = 1;
+
     private String nickname;
-    private String password;
+    private transient String password;
     private String encPwd; //password criptata per poter essere salvata in memoria
-    @Expose
-    private USER_STATUS userStatus;
-    private ReadWriteLock lock;
+    private transient USER_STATUS userStatus;
+    private transient ReadWriteLock lock;
     //TODO descrittore della connessione
 
 // ------ Constructors ------
@@ -134,5 +137,10 @@ public class User {
         return str;
     }
 
-   
+
+    public void resetUser() {
+        password = decryptPassword();
+        lock = new ReentrantReadWriteLock();
+        userStatus = USER_STATUS.OFFLINE;
+    }
 }

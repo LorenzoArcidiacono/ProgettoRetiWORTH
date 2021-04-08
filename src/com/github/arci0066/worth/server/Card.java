@@ -3,7 +3,13 @@ package com.github.arci0066.worth.server;
 import com.github.arci0066.worth.enumeration.ANSWER_CODE;
 import com.github.arci0066.worth.enumeration.CARD_STATUS;
 
-public class Card implements com.github.arci0066.worth.interfaces.CardInterface {
+import java.io.Serial;
+import java.io.Serializable;
+
+public class Card implements com.github.arci0066.worth.interfaces.CardInterface, Serializable {
+    @Serial
+    private static final long serialVersionUID = 1;
+
     private String cardTitle;
     private String cardDescription;
     private CARD_STATUS cardStatus;
