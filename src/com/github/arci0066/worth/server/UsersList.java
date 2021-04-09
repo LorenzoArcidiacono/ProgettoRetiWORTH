@@ -1,9 +1,6 @@
 package com.github.arci0066.worth.server;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.google.gson.annotations.Expose;
-import com.google.gson.reflect.TypeToken;
 
 import java.io.*;
 import java.nio.charset.Charset;
@@ -15,13 +12,11 @@ import java.util.List;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-public class UsersList implements Serializable{
-    @Serial
-    private static final long serialVersionUID = 1;
-
+public class UsersList {
     private static UsersList instance;
+    @Expose
     List<User> usersList;
-    transient ReadWriteLock lock;
+    ReadWriteLock lock;
 
 
 // ------ Constructors ------
@@ -35,7 +30,7 @@ public class UsersList implements Serializable{
         lock = new ReentrantReadWriteLock();
         usersList = oldUserList;
         for (User u : usersList) {
-            u.resetUser();
+            u.resetAfterBackup();
         }
     }
 
@@ -53,11 +48,11 @@ public class UsersList implements Serializable{
         return instance;
     }
 
-    public static UsersList getSingletonInstance(List<User> usersList) {
+    public static UsersList getSingletonInstance(List<User> oldUsersList) {
         if (instance == null) {
             synchronized (UsersList.class) {
                 if (instance == null)
-                    instance = new UsersList(usersList);
+                    instance = new UsersList(oldUsersList);
             }
         }
         return instance;
@@ -122,8 +117,10 @@ public class UsersList implements Serializable{
                 '}';
     }
 
+
+    // ----------- Serialization -----------
     public void saveAll() {
-        Path path = Paths.get(ServerSettings.serverBackupDirPath + "/Users.txt");
+        Path path = Paths.get(ServerSettings.usersBackupFile);
         lock.readLock().lock();
         try (BufferedWriter writer = Files.newBufferedWriter(path, Charset.forName("UTF-8"))) {
             for (User user : usersList) {
@@ -140,7 +137,7 @@ public class UsersList implements Serializable{
     }
 
     public void serialize() {
-        try(FileOutputStream fos = new FileOutputStream(ServerSettings.serverBackupDirPath + "/Users");
+        try(FileOutputStream fos = new FileOutputStream(ServerSettings.serverBackupDirPath + "/Users.bkp");
             ObjectOutputStream out = new ObjectOutputStream(fos);) {
             out.writeObject(usersList);
         }

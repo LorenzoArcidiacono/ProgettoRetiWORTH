@@ -1,26 +1,22 @@
 package com.github.arci0066.worth.server;
 
 import java.io.*;
-import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import static com.github.arci0066.worth.server.ServerSettings.projectUsersBackupFile;
+import static com.github.arci0066.worth.server.ServerSettings.projectsBackupFile;
 import static com.github.arci0066.worth.server.ServerSettings.serverBackupDirPath;
 
 /*CLASSE SINGLETON && THREAD SAFE*/
-public class ProjectsList implements Serializable {
-    @Serial
-    private static final long serialVersionUID = 1;
+public class ProjectsList  {
     private static ProjectsList instance;
     private List<Project> projectsList;
-    transient ReadWriteLock lock;
+    ReadWriteLock lock;
 
 // ------ Constructors ------
 
@@ -29,11 +25,11 @@ public class ProjectsList implements Serializable {
         lock = new ReentrantReadWriteLock();
     }
 
-    private ProjectsList(List<Project> projects) {
+    private ProjectsList(List<Project> oldProjects) {
         lock = new ReentrantReadWriteLock();
-        projectsList = projects;
+        projectsList = oldProjects;
         for (Project p : projectsList) {
-            p.resetProject();
+            p.resetAfterBackup();
         }
     }
 
@@ -51,11 +47,11 @@ public class ProjectsList implements Serializable {
         return instance;
     }
 
-    public static ProjectsList getSingletonInstance(List<Project> projects) {
+    public static ProjectsList getSingletonInstance(List<Project> oldProjects) {
         if (instance == null) {
             synchronized (ProjectsList.class) {
                 if (instance == null)
-                    instance = new ProjectsList(projects);
+                    instance = new ProjectsList(oldProjects);
             }
         }
         return instance;
@@ -94,6 +90,7 @@ public class ProjectsList implements Serializable {
         }
     }
 
+
     /*
      * REQUIRES: project != null
      * EFFECTS: rimuove il progetto alla lista se questo esiste ( Nota. tutti i controlli sono fatti dal chiamante )
@@ -128,9 +125,11 @@ public class ProjectsList implements Serializable {
         return project;
     }
 
+
+    // ---------- Serialization ------------
     public void serialize() {
         lock.readLock().lock();
-        try (FileOutputStream fos = new FileOutputStream(ServerSettings.serverBackupDirPath + "/Projects");
+        try (FileOutputStream fos = new FileOutputStream(projectsBackupFile);
              ObjectOutputStream out = new ObjectOutputStream(fos);) {
             out.writeObject(projectsList);
         } catch (IOException ex) {
@@ -151,8 +150,8 @@ public class ProjectsList implements Serializable {
                 Path path = Paths.get(serverBackupDirPath + "/" + prj.getProjectTitle());
                 Files.createDirectories(path);
                 prj.saveCard(path);
-                Path userListPath = Paths.get(path + projectUsersBackupFile);
-                prj.saveUsersList(userListPath);
+                //Path userListPath = Paths.get(path + projectUsersBackupFile);
+                //prj.saveUsersList(userListPath);
             }
         } catch (IOException e) {
             e.printStackTrace();

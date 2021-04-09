@@ -59,7 +59,7 @@ public class Client {
         scanner.useDelimiter(System.lineSeparator()); //Evita di lasciare un '\n' in sospeso
         clientSocket = new Socket();
         gson = new Gson();
-
+// TODO: 09/04/21 portrei allocare dopo aver capito cosa vuole fare 
         try { //collego la RMI
             r = LocateRegistry.getRegistry(ServerSettings.REGISTRY_PORT);
             remote = r.lookup(ServerSettings.REGISRTY_OP_NAME);
@@ -83,15 +83,16 @@ public class Client {
         printWelcomeMenu();
         operazione = scegliOperazione();
         boolean check = true;
+        Message message;
         switch (operazione) {
             case 1 -> check = register();
-            case 2 -> login();
+            case 2 -> message = login();
             case 3 -> exit = true;
             default -> exit = true; // TODO: 27/01/21 riprovare
         }
-        if (check == false)
+        if (check == false) //registrazione non andata a buon fine
             exit = true;
-        if (!exit) {
+        if (!exit) {    
             if (!openConnection()) {
                 exit = true;
                 System.out.println("Errore di connessione");
@@ -100,16 +101,7 @@ public class Client {
         if (!exit) {
             System.out.println("Client: connesso al server.");
 
-            /*switch (operazione) {
-                case 1 -> register();
-                case 2 -> login();
-                case 3 -> exit = true;
-                default -> {
-                    System.out.println("Scelta non valida."); // TODO: 26/01/21 farlo riprovare
-                    exit = true;
-                }
-            }*/
-            //aspettaRispostaServer();
+            
             // Loop principale in cui scegliere le operazioni
             while (!exit) {
                 if (clientSocket.isClosed()) {
@@ -170,126 +162,6 @@ public class Client {
         }
         //Thread.currentThread().interrupt();
     }
-    /*public Client(String testFileName) throws FileNotFoundException {
-        if (testFileName != null) {
-            System.setIn(new FileInputStream(new File(testFileName)));
-        }
-        scanner = new Scanner(System.in);
-        scanner.useDelimiter(System.lineSeparator()); //Evita di lasciare un '\n' in sospeso
-        clientSocket = new Socket();
-        gson = new Gson();
-
-        try {
-            r = LocateRegistry.getRegistry(ServerSettings.REGISTRY_PORT);
-            remote = r.lookup(ServerSettings.REGISRTY_OP_NAME);
-            serverObj = (RemoteRegistrationInterface) remote;
-
-            serverInterface = (ServerRMI) r.lookup("SERVER");
-            callbackObj = new NotifyEventInterfaceImpl();
-            stub = (NotifyEventInterface) UnicastRemoteObject.exportObject(callbackObj, 0);
-            //serverInterface.registerForCallback(stub);
-
-        } catch (AccessException e) {
-            e.printStackTrace();
-        } catch (RemoteException e) {
-            e.printStackTrace();
-        } catch (NotBoundException e) {
-            e.printStackTrace();
-        }
-
-
-    }*/
-
-    /*public void run() {
-        int operazione = -1;
-        boolean exit = false;
-        printWelcomeMenu();
-        operazione = scegliOperazione();
-        boolean check = true;
-        switch (operazione) {
-            case 1 -> check = register();
-            case 2 -> login();
-            case 3 -> exit = true;
-            default -> exit = true; // TODO: 27/01/21 riprovare
-        }
-        if(check == false)
-            exit = true;
-        if (!exit) {
-            if (!openConnection()) {
-                exit = true;
-                System.out.println("Errore di connessione");
-            }
-        }
-        if (!exit) {
-            System.out.println("Client: connesso al server.");
-
-            *//*switch (operazione) {
-                case 1 -> register();
-                case 2 -> login();
-                case 3 -> exit = true;
-                default -> {
-                    System.out.println("Scelta non valida."); // TODO: 26/01/21 farlo riprovare 
-                    exit = true;
-                }
-            }*//*
-            //aspettaRispostaServer();
-
-            while (!exit) {
-                if (clientSocket.isClosed()) {
-                    System.err.println("Connessione chiusa");
-                    break;
-                }
-                Message msg = null;
-                printOperationMenu();
-                operazione = scegliOperazione();
-                switch (operazione) {
-                    case 1 -> System.err.println("OP non possibile.");//msg = login(); // TODO: 23/01/21 posso eliminarlo e se logout lo mando al menù prima;
-                    case 2 -> msg = logout();
-                    case 3 -> msg = listUsers();
-                    case 4 -> msg = listOnlineUsers();
-                    case 5 -> msg = listProjects();
-                    case 6 -> msg = createProject();
-                    case 7 -> msg = addMember();
-                    case 8 -> msg = showMember();
-                    case 9 -> msg = showProjectCards();
-                    case 10 -> msg = showCard();
-                    case 11 -> msg = addCard();
-                    case 12 -> msg = moveCard();
-                    case 13 -> msg = getCardHistory();
-                    case 14, 15 -> {
-                        System.err.println("Non supportata.");
-                        break;
-                    }
-                    case 16 -> msg = cancelProject();
-                    case 17 -> {
-                        exit = true;
-                        msg = closeConnection();
-                    }
-                    default -> {
-                        System.out.println("Scelta non valida.");
-                        break;
-                    }
-                }
-                if (msg != null) {
-                    sendMessage(msg);
-                    if (!msg.getOperationCode().equals(OP_CODE.CLOSE_CONNECTION))
-                        rispostaServer();
-                }
-
-            }
-            try {
-                System.out.println("Chiudo Socket");
-                scanner.close();
-                clientSocket.close();
-                readerIn.close();
-                writerOut.close();
-                serverInterface.unregisterForCallback(stub);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-    }
-*/
 
     private static boolean openConnection() {
         try { //Prova a connettersi al server.

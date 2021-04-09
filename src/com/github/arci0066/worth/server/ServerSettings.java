@@ -7,7 +7,8 @@ public class ServerSettings {
 
     public static final int maxUnsavedOperation = 5;
     public static final String serverBackupDirPath = "./extra/Server_Backup";
-    public static final String projectUsersBackupFile = "/projectUsers.txt";
+    public static final String usersBackupFile = "./extra/Server_Backup/Users.bkp";
+    public static final String projectsBackupFile = "./extra/Server_Backup/Projects.bkp";
 
     // TODO: 04/03/21 impedire che l'utente usi nomi o pwd con : e , o cambiare uso 
     // TODO: 04/03/21 sembra che : e , non saranno mai usati del encoder https://www.base64decode.org/

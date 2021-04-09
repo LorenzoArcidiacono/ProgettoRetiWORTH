@@ -40,6 +40,7 @@ public class RemoteRegistration extends RemoteServer implements RemoteRegistrati
                 String gsonUserList;
                 synchronized (usersList) { //TODO capire se serve sincronizzare
                     gsonUserList = gson.toJson(usersList);
+                    System.err.println(gsonUserList);
                 }
                 server.update(gsonUserList);
                 return ANSWER_CODE.OP_OK;

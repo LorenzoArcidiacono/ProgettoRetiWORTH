@@ -14,10 +14,11 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 public class User implements Serializable {
     @Serial
     private static final long serialVersionUID = 1;
-
+    @Expose
     private String nickname;
     private transient String password;
     private String encPwd; //password criptata per poter essere salvata in memoria
+    @Expose
     private transient USER_STATUS userStatus;
     private transient ReadWriteLock lock;
     //TODO descrittore della connessione
@@ -138,7 +139,7 @@ public class User implements Serializable {
     }
 
 
-    public void resetUser() {
+    public void resetAfterBackup() {
         password = decryptPassword();
         lock = new ReentrantReadWriteLock();
         userStatus = USER_STATUS.OFFLINE;

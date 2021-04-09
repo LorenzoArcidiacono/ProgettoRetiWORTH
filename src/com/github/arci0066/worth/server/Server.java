@@ -25,7 +25,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static com.github.arci0066.worth.server.ServerSettings.serverBackupDirPath;
+import static com.github.arci0066.worth.server.ServerSettings.*;
 
 public class Server {
 
@@ -144,7 +144,7 @@ public class Server {
         ProjectsList projectsList = null;
 
         //Leggo il backup della lista utenti registrati
-        try(FileInputStream fis = new FileInputStream(serverBackupDirPath+"/Users");
+        try(FileInputStream fis = new FileInputStream(usersBackupFile);
             ObjectInputStream in = new ObjectInputStream(fis)) {
             registeredUsersList = (List<User>) in.readObject();
             usersList = UsersList.getSingletonInstance(registeredUsersList);
@@ -163,7 +163,7 @@ public class Server {
 
 
         //Leggo il backup dei progetti
-        try(FileInputStream fis = new FileInputStream(serverBackupDirPath+"/Projects");
+        try(FileInputStream fis = new FileInputStream(projectsBackupFile);
             ObjectInputStream in = new ObjectInputStream(fis)) {
             oldProjectsList = (List<Project>) in.readObject();
             projectsList = ProjectsList.getSingletonInstance(oldProjectsList);

@@ -18,10 +18,11 @@ public class BackupTask extends Thread {
 
     @Override
     public void run() {
-        System.out.println("Salvo tutto!");
+        System.err.println("Salvo tutto!");
 //        Serializzazioni
         usersList.serialize();
         projectsList.serialize();
+
 //        Salva i progetti singolarmente in cartelle
         projectsList.saveAll();
     }

@@ -2,7 +2,6 @@ package com.github.arci0066.worth.server;
 
 import com.github.arci0066.worth.enumeration.*;
 import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
 
 import java.io.*;
 import java.nio.charset.Charset;
@@ -10,15 +9,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
-import static com.github.arci0066.worth.server.ServerSettings.projectUsersBackupFile;
-import static com.github.arci0066.worth.server.ServerSettings.serverBackupDirPath;
 
 //CLASSE THREAD SAFE
 public class Project implements Serializable {
@@ -48,62 +42,6 @@ public class Project implements Serializable {
         lock = new ReentrantReadWriteLock();
     }
 
-    public Project(Path path) {
-        String usersNickname = "";
-        Path nicknamePath = Paths.get(path+projectUsersBackupFile);
-        Gson gson = new Gson();
-        projectTitle = path.toString().replaceAll(serverBackupDirPath+"/","");
-
-//          leggo la lista degli utenti del progetto
-        try (BufferedReader reader = Files.newBufferedReader(nicknamePath)){
-            String line;
-            while ((line = reader.readLine()) != null)
-                usersNickname += line;
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        projectUsers = gson.fromJson(usersNickname,new TypeToken<List<String>>() {}.getType());
-        System.err.println(projectUsers);
-
-//        aggiungo le cards
-        todoList = new ArrayList<>();
-        inProgressList = new ArrayList<>();
-        toBeRevisedList = new ArrayList<>();
-        doneList = new ArrayList<>();
-        lock = new ReentrantReadWriteLock();
-
-        File[] result = null;
-        File dir = new File(String.valueOf(path));
-        // questo filtro permette di selezionare solo i file .txt
-        // TODO: 31/03/21 salvare i file in .crd?
-        FilenameFilter filter = new FilenameFilter() {
-            @Override
-            public boolean accept(File f, String name) {
-                return name.endsWith(".txt");
-            }
-        };
-        result = dir.listFiles(filter);
-        if (result != null) {
-            for (File f: result) {
-                //controllo che non sia il file degli utenti
-                String namePath = "/"+f.getName();
-                if(!namePath.contains(projectUsersBackupFile)){
-                    String cardFile = "";
-                    try (BufferedReader reader = new BufferedReader(new FileReader(f))){
-                        String line;
-                        while ((line = reader.readLine()) != null)
-                            cardFile += line;
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                    String[] str = cardFile.split("%");
-                    for (String s: str) {
-                        System.out.println("-"+s);
-                    }
-                }
-            }
-        }
-    }
 
     // ------ Getters -------
     public String getProjectTitle() {
@@ -458,10 +396,9 @@ public class Project implements Serializable {
         Path cardPath;
         cardPath = Paths.get(path +"/"+ crd.getCardTitle()+".txt");
         try(BufferedWriter writer = Files.newBufferedWriter(cardPath, Charset.forName("UTF-8"))){
-            writer.write("%Title:"+ crd.getCardTitle()+"\n");
-            writer.write("%Description:"+ crd.getCardDescription()+"\n");
-            writer.write("%List:"+ crd.getCardStatus()+"\n");
-            writer.write("%"+crd.getCardHistory()+"\n");
+            writer.write("Title: "+ crd.getCardTitle()+"\n");
+            writer.write("Description: "+ crd.getCardDescription()+"\n");
+            writer.write("History: "+crd.getCardHistory()+"\n");
         }catch(IOException ex){
             ex.printStackTrace();
         }
@@ -478,7 +415,7 @@ public class Project implements Serializable {
         }
     }
 
-    public void resetProject() {
+    public void resetAfterBackup() {
         lock = new ReentrantReadWriteLock();
     }
 }

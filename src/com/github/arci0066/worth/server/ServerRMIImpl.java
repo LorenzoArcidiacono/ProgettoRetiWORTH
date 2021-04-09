@@ -45,10 +45,8 @@ registrati */
     private synchronized void doCallbacks(String value) throws
             RemoteException {
         System.out.println("Starting callbacks.");
-        Iterator i = clients.iterator( );
-//int numeroClienti = clients.size( );
-        while (i.hasNext()) {
-            NotifyEventInterface client = (NotifyEventInterface) i.next();
+        //int numeroClienti = clients.size( );
+        for (NotifyEventInterface client : clients) {
             client.notifyEvent(value);
         }
         System.out.println("Callbacks complete.");
