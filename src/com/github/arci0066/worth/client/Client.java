@@ -59,7 +59,7 @@ public class Client {
         scanner.useDelimiter(System.lineSeparator()); //Evita di lasciare un '\n' in sospeso
         clientSocket = new Socket();
         gson = new Gson();
-// TODO: 09/04/21 portrei allocare dopo aver capito cosa vuole fare 
+// TODO: 09/04/21 portrei allocare dopo aver capito cosa vuole fare
         try { //collego la RMI
             r = LocateRegistry.getRegistry(ServerSettings.REGISTRY_PORT);
             remote = r.lookup(ServerSettings.REGISRTY_OP_NAME);
@@ -83,13 +83,14 @@ public class Client {
         printWelcomeMenu();
         operazione = scegliOperazione();
         boolean check = true;
-        Message message;
+        Message message = null;
         switch (operazione) {
             case 1 -> check = register();
             case 2 -> message = login();
             case 3 -> exit = true;
             default -> exit = true; // TODO: 27/01/21 riprovare
         }
+        // TODO: 09/04/21 se esco qui non faccio pulizia!
         if (check == false) //registrazione non andata a buon fine
             exit = true;
         if (!exit) {    
@@ -97,11 +98,18 @@ public class Client {
                 exit = true;
                 System.out.println("Errore di connessione");
             }
+            if(!exit && (message != null)) { //se l'op era di login
+                sendMessage(message);
+                ANSWER_CODE answer_code = rispostaServer();
+                if(answer_code != ANSWER_CODE.OP_OK){ //se il login non è andato a buon fine
+                    exit = true;
+                    System.out.println("Chiusura dovuta a errore di Login.");
+                }
+            }
         }
         if (!exit) {
-            System.out.println("Client: connesso al server.");
+                System.out.println("Client: connesso al server.");
 
-            
             // Loop principale in cui scegliere le operazioni
             while (!exit) {
                 if (clientSocket.isClosed()) {
@@ -191,7 +199,7 @@ public class Client {
         }
     }
 
-    private static void rispostaServer() {
+    private static ANSWER_CODE rispostaServer() {
         String message = "", read = "";
         boolean end = false;
         // TODO: 26/01/21 Capire come gestire questo while
@@ -223,6 +231,7 @@ public class Client {
                 break;
             }
         }
+        return answer.getAnswerCode();
     }
 
 
@@ -285,6 +294,7 @@ public class Client {
         nickname = scanner.next();
         System.out.print("Password:");
         password = scanner.next();
+
         return new Message(nickname, password, OP_CODE.LOGIN, null, null, null);
     }
 

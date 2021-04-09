@@ -2,8 +2,6 @@ package com.github.arci0066.worth.server;
 
 import com.github.arci0066.worth.enumeration.ANSWER_CODE;
 import com.github.arci0066.worth.interfaces.RemoteRegistrationInterface;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 
 import java.rmi.RemoteException;
 import java.rmi.registry.Registry;
@@ -13,7 +11,6 @@ public class RemoteRegistration extends RemoteServer implements RemoteRegistrati
     private UsersList usersList;
     private ServerRMIImpl server;
     Registry registry;
-    private Gson gson;
 
     // ------ Constructors ------
     public RemoteRegistration(ServerRMIImpl server) throws RemoteException {
@@ -24,9 +21,6 @@ public class RemoteRegistration extends RemoteServer implements RemoteRegistrati
         //ServerRMI stub2 = (ServerRMI) UnicastRemoteObject.exportObject (this.server,0);
         /*String name = "SERVER";
         registry.rebind (name, stub2);*/
-        gson = new GsonBuilder()
-                .excludeFieldsWithoutExposeAnnotation()
-                .create();
     }
 
     @Override
@@ -37,12 +31,12 @@ public class RemoteRegistration extends RemoteServer implements RemoteRegistrati
                 User user = new User(userNIckname, password,false);
                 user.login();
                 usersList.add(user);
-                String gsonUserList;
+                String registeredUserList;
                 synchronized (usersList) { //TODO capire se serve sincronizzare
-                    gsonUserList = gson.toJson(usersList);
-                    System.err.println(gsonUserList);
+                    registeredUserList = usersList.getUsersNickname(); // TODO: 09/04/21 Meglio così o json?
+                    System.err.println(registeredUserList);
                 }
-                server.update(gsonUserList);
+                server.update(registeredUserList);
                 return ANSWER_CODE.OP_OK;
             }
             System.err.println("Err: " + userNIckname + "," + password);
