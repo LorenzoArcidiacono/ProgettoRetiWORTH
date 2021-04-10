@@ -66,38 +66,44 @@ public class Client {
         scanner.useDelimiter(System.lineSeparator()); //Evita di lasciare un '\n' in sospeso
         clientSocket = new Socket();
         gson = new Gson();
-// TODO: 09/04/21 devo allocare dopo aver capito cosa vuole fare per evitare errori
-        try { //collego la RMI
-            r = LocateRegistry.getRegistry(ServerSettings.REGISTRY_PORT);
-            remote = r.lookup(ServerSettings.REGISRTY_OP_NAME);
-            serverObj = (RemoteRegistrationInterface) remote;
 
-            serverInterface = (ServerRMI) r.lookup("SERVER");
-            callbackObj = new NotifyEventInterfaceImpl();
-            stub = (NotifyEventInterface) UnicastRemoteObject.exportObject(callbackObj, 0);
-
-
-        } catch (AccessException e) {
-            e.printStackTrace();
-        } catch (RemoteException e) {
-            e.printStackTrace();
-        } catch (NotBoundException e) {
-            e.printStackTrace();
-        }
         //Primo menu per la scelta di come accedere
         int operazione = -1;
         boolean exit = false;
         printWelcomeMenu();
-        operazione = scegliOperazione();
         boolean check = true;
         Message message = null;
+
+        operazione = scegliOperazione();
+
+        if(operazione == 1 || operazione == 2 ) { // Registrazione o Login
+            // TODO: 09/04/21 devo allocare dopo aver capito cosa vuole fare per evitare errori
+            try {  //setto la RMI
+                r = LocateRegistry.getRegistry(ServerSettings.REGISTRY_PORT);
+                remote = r.lookup(ServerSettings.REGISRTY_OP_NAME);
+                serverObj = (RemoteRegistrationInterface) remote;
+
+                serverInterface = (ServerRMI) r.lookup("SERVER");
+                callbackObj = new NotifyEventInterfaceImpl();
+                stub = (NotifyEventInterface) UnicastRemoteObject.exportObject(callbackObj, 0);
+                serverInterface.registerForCallback(stub);
+
+            } catch (AccessException e) {
+                e.printStackTrace();
+            } catch (RemoteException e) {
+                e.printStackTrace();
+            } catch (NotBoundException e) {
+                e.printStackTrace();
+            }
+        }
+
         switch (operazione) {
             case 1 -> check = register();
             case 2 -> message = login();
             default -> exit = true; // TODO: 27/01/21 riprovare
         }
         // TODO: 09/04/21 se esco qui non faccio pulizia!
-        if (!check) {//registrazione non andata a buon fine
+        if (!check) { //registrazione non andata a buon fine
             System.err.println("È avvenuto un errore durante la registrazione.");
             exit = true;
         }
@@ -122,6 +128,7 @@ public class Client {
         }
         if (!exit) {
                 System.out.println("Client: connesso al server.");
+
 
             // Loop principale in cui scegliere le operazioni
             while (!exit) {
