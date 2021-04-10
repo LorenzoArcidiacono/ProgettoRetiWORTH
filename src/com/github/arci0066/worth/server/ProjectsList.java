@@ -1,5 +1,11 @@
+/*
+*
+* @Author Lorenzo Arcidiacono
+* @Mail l.arcidiacono1@studenti.unipi.it
+* @Matricola 534235
+*
+*/
 package com.github.arci0066.worth.server;
-
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -37,6 +43,11 @@ public class ProjectsList  {
     /* Doppio controllo per evitare che troppi Thread aspettino la mutex,
      * secondo controllo per casi in cui un thread si blocchi nell' if prima di completare
      */
+
+    /*
+     * EFFECTS: instanzia un oggetto singleton della classe
+     * RETURN: l' istanza dell' oggetto
+    */
     public static ProjectsList getSingletonInstance() {
         if (instance == null) {
             synchronized (ProjectsList.class) {
@@ -47,6 +58,10 @@ public class ProjectsList  {
         return instance;
     }
 
+    /*
+     * EFFECTS: instanzia un oggetto singleton della classe
+     * RETURN: l' istanza dell' oggetto
+     */
     public static ProjectsList getSingletonInstance(List<Project> oldProjects) {
         if (instance == null) {
             synchronized (ProjectsList.class) {
@@ -127,6 +142,10 @@ public class ProjectsList  {
 
 
     // ---------- Serialization ------------
+
+    /*
+     * EFFECTS: salva su un file di backup la lista dei progetti serializzata
+    */
     public void serialize() {
         lock.readLock().lock();
         try (FileOutputStream fos = new FileOutputStream(projectsBackupFile);

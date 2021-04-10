@@ -1,3 +1,10 @@
+/*
+*
+* @Author Lorenzo Arcidiacono
+* @Mail l.arcidiacono1@studenti.unipi.it
+* @Matricola 534235
+*
+*/
 package com.github.arci0066.worth.client;
 
 import com.github.arci0066.worth.enumeration.ANSWER_CODE;
@@ -59,7 +66,7 @@ public class Client {
         scanner.useDelimiter(System.lineSeparator()); //Evita di lasciare un '\n' in sospeso
         clientSocket = new Socket();
         gson = new Gson();
-// TODO: 09/04/21 portrei allocare dopo aver capito cosa vuole fare
+// TODO: 09/04/21 devo allocare dopo aver capito cosa vuole fare per evitare errori
         try { //collego la RMI
             r = LocateRegistry.getRegistry(ServerSettings.REGISTRY_PORT);
             remote = r.lookup(ServerSettings.REGISRTY_OP_NAME);
@@ -68,7 +75,7 @@ public class Client {
             serverInterface = (ServerRMI) r.lookup("SERVER");
             callbackObj = new NotifyEventInterfaceImpl();
             stub = (NotifyEventInterface) UnicastRemoteObject.exportObject(callbackObj, 0);
-            //serverInterface.registerForCallback(stub);
+
 
         } catch (AccessException e) {
             e.printStackTrace();
@@ -87,23 +94,29 @@ public class Client {
         switch (operazione) {
             case 1 -> check = register();
             case 2 -> message = login();
-            case 3 -> exit = true;
             default -> exit = true; // TODO: 27/01/21 riprovare
         }
         // TODO: 09/04/21 se esco qui non faccio pulizia!
-        if (check == false) //registrazione non andata a buon fine
+        if (!check) {//registrazione non andata a buon fine
+            System.err.println("È avvenuto un errore durante la registrazione.");
             exit = true;
-        if (!exit) {    
+        }
+        if (!exit) {
             if (!openConnection()) {
                 exit = true;
-                System.out.println("Errore di connessione");
+                System.err.println("Errore di connessione.");
+            }
+            try {
+                serverInterface.registerForCallback(stub);
+            } catch (RemoteException e) {
+                e.printStackTrace();
             }
             if(!exit && (message != null)) { //se l'op era di login
                 sendMessage(message);
                 ANSWER_CODE answer_code = rispostaServer();
                 if(answer_code != ANSWER_CODE.OP_OK){ //se il login non è andato a buon fine
                     exit = true;
-                    System.out.println("Chiusura dovuta a errore di Login.");
+                    System.err.println("Chiusura dovuta a errore di Login.");
                 }
             }
         }
@@ -120,7 +133,7 @@ public class Client {
                 printOperationMenu();
                 operazione = scegliOperazione();
                 switch (operazione) {
-                    case 1 -> System.err.println("OP non possibile.");//msg = login(); // TODO: 23/01/21 posso eliminarlo e se logout lo mando al menù prima;
+                    case 1 -> msg = login(); // TODO: 23/01/21 posso eliminarlo e se logout lo mando al menù prima; chiede di nuovo Nick e pwd
                     case 2 -> {
                         msg = logout();
                         exit = true;
@@ -168,6 +181,7 @@ public class Client {
                 e.printStackTrace();
             }
         }
+        System.out.println("Esco dal programma.");
         //Thread.currentThread().interrupt();
     }
 
@@ -277,7 +291,7 @@ public class Client {
         ANSWER_CODE answer_code = ANSWER_CODE.OP_FAIL;
         try {
             // TODO: 08/02/21 callback deve essere registrato dopo ma deve essere comunque inviato
-            serverInterface.registerForCallback(stub);
+            //serverInterface.registerForCallback(stub);
             answer_code = serverObj.register(nickname, password);
             System.err.println("Ricevuto " + answer_code);
         } catch (RemoteException e) {

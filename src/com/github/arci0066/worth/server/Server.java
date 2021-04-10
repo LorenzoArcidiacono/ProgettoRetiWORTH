@@ -1,3 +1,10 @@
+/*
+*
+* @Author Lorenzo Arcidiacono
+* @Mail l.arcidiacono1@studenti.unipi.it
+* @Matricola 534235
+*
+*/
 package com.github.arci0066.worth.server;
 
 import com.github.arci0066.worth.enumeration.ANSWER_CODE;
@@ -11,19 +18,14 @@ import java.net.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.rmi.AlreadyBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
-import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static com.github.arci0066.worth.server.ServerSettings.*;
 
@@ -37,7 +39,7 @@ public class Server {
         ThreadPoolExecutor pool;
         Thread leader;
 
-        boolean exit;
+        boolean exit = false;
 
         //Oggetti per la connessione
         final ServerSocket serverSocket;
@@ -48,12 +50,10 @@ public class Server {
                 .create();
 
         //Inizializza gli oggetti
-        //projectsList = ProjectsList.getSingletonInstance();
-        //registeredUsersList = UsersList.getSingletonInstance();
         socketList = SocketList.getSingletonInstance();
         pool = new ThreadPoolExecutor(ServerSettings.MIN_THREAD_NUMBER, ServerSettings.MAX_THREAD_NUMBER, ServerSettings.THREAD_KEEP_ALIVE_TIME, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>());
 
-        //Creo la directory in cui salvo i progetti e, se esiste, leggo la lista degli utenti registrati
+        //Creo la directory in cui salvo i progetti e, se esistono, leggo i file di backup 
         Path path = Paths.get(serverBackupDirPath);
         try {
             Files.createDirectories(path);
@@ -67,8 +67,7 @@ public class Server {
         //Lancio il thread Leader
         leader = new Leader(pool);
         leader.start();
-
-        exit = false;
+        
         //Apre la connessione
         try {
             serverSocket = new ServerSocket();
@@ -116,7 +115,7 @@ public class Server {
 
 
         //Ciclo principale
-        while (!exit) {
+        while (!exit) { // TODO: 09/04/21 implementare qualcosa che riconosca il messaggio di stop
             System.out.println("\nWaiting for clients");
             //Aspetta una connessione
             System.out.println("2 " + socketList);
@@ -125,7 +124,7 @@ public class Server {
                 client = serverSocket.accept();
                 System.out.println("\nServer: new client:" + client.getRemoteSocketAddress());
                 //server.update(gson.toJson(registeredUsersList)); // TODO: 27/01/21 andrebbe messo al momento della registrazione
-                synchronized (socketList) {
+                synchronized (socketList) { //aggiungo la connessione all' elenco
                     socketList.add(client);
                 }
                 System.out.println(socketList);
@@ -136,7 +135,11 @@ public class Server {
         }
     }
 
-    private static void readServerBackup(Path path) {
+
+    /*
+     * EFFECTS: Legge i file di backup sul disco e inizializza la lista degli utenti e dei progetti
+    */
+    private static void readServerBackup(Path path) { // TODO: 09/04/21 posso eliminare path
         List<User> registeredUsersList = null;
         UsersList usersList = null;
 
@@ -148,8 +151,7 @@ public class Server {
             ObjectInputStream in = new ObjectInputStream(fis)) {
             registeredUsersList = (List<User>) in.readObject();
             usersList = UsersList.getSingletonInstance(registeredUsersList);
-            System.out.println(usersList.getUsersNickname());
-            System.out.println(usersList.getOnlineUsersNickname());
+            System.out.println("Backup utenti:"+usersList.getUsersNickname());
         }
         catch (FileNotFoundException e){
             System.err.println("Nessun file di backup trovato.");
@@ -167,7 +169,7 @@ public class Server {
             ObjectInputStream in = new ObjectInputStream(fis)) {
             oldProjectsList = (List<Project>) in.readObject();
             projectsList = ProjectsList.getSingletonInstance(oldProjectsList);
-            System.out.println(projectsList.getProjectsTitle());
+            System.out.println("Backup progetti:"+ projectsList.getProjectsTitle());
         }
         catch (FileNotFoundException e){
             System.err.println("Nessun file di backup trovato.");

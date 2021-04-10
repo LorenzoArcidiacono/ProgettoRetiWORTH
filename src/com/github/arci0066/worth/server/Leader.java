@@ -1,3 +1,10 @@
+/*
+*
+* @Author Lorenzo Arcidiacono
+* @Mail l.arcidiacono1@studenti.unipi.it
+* @Matricola 534235
+*
+*/
 package com.github.arci0066.worth.server;
 
 import java.io.IOException;
@@ -23,7 +30,7 @@ public class Leader extends Thread {
         while (true) { // TODO: 27/01/21 posso impostare un timeout? se ho pochi client giro molto a vuoto, posso cambiarlo in base al lavoro del pool o al numero di client 
             synchronized (socketList) { // TODO Non esco mai e il server non può aggiungere?
                 //ogni maxUnsavedOperation faccio un backup in memoria di tutte le informazioni del server
-                if(countOperation >= maxUnsavedOperation){
+                if(countOperation >= maxUnsavedOperation){ // TODO: 09/04/21 salvare in base al numero di utenti attivi?
                     countOperation = 0;
                     backupServerStatus();
                 }
