@@ -71,6 +71,10 @@ public class User implements Serializable {
         return str;
     }
 
+    public USER_STATUS getUserStatus() {
+        return userStatus;
+    }
+
     // ------ Setters -------
 
     public void login() {

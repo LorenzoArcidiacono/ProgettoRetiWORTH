@@ -348,6 +348,7 @@ public class Project implements Serializable {
     }
 
     private CARD_STATUS getStatus(String cardStatus) {
+        System.err.println(cardStatus);
         cardStatus=cardStatus.toUpperCase();
         return switch (cardStatus) {
             case "TODO" -> CARD_STATUS.TODO;
@@ -416,6 +417,18 @@ public class Project implements Serializable {
     }
 
     public void resetAfterBackup() {
+        for (Card c: todoList) {
+            System.out.println(c.toString());
+        }
+        for (Card c: inProgressList) {
+            System.out.println(c.toString());
+        }
+        for (Card c: toBeRevisedList) {
+            System.out.println(c.toString());
+        }
+        for (Card c: doneList) {
+            System.out.println(c.toString());
+        }
         lock = new ReentrantReadWriteLock();
     }
 }

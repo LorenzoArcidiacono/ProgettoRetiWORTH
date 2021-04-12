@@ -31,12 +31,12 @@ public class RemoteRegistration extends RemoteServer implements RemoteRegistrati
                 User user = new User(userNIckname, password,false);
                 user.login();
                 usersList.add(user);
-                String registeredUserList;
+                /*String registeredUserList;
                 synchronized (usersList) { //TODO capire se serve sincronizzare
                     registeredUserList = usersList.getUsersNickname(); // TODO: 09/04/21 Meglio così o json?
                     System.err.println(registeredUserList);
                 }
-                server.update(registeredUserList);
+                server.update(registeredUserList);*/
                 return ANSWER_CODE.OP_OK;
             }
             System.err.println("Err: " + userNIckname + "," + password);

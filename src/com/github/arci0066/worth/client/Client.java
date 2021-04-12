@@ -14,6 +14,7 @@ import com.github.arci0066.worth.interfaces.RemoteRegistrationInterface;
 import com.github.arci0066.worth.interfaces.ServerRMI;
 import com.github.arci0066.worth.server.Message;
 import com.github.arci0066.worth.server.ServerSettings;
+import com.github.arci0066.worth.server.User;
 import com.google.gson.Gson;
 
 import java.io.*;
@@ -25,6 +26,8 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Scanner;
 
 import static java.lang.Thread.sleep;
@@ -35,10 +38,11 @@ public class Client {
 
     private static String password;
     private static String nickname;
-    private static Scanner scanner;    //Per leggere le richieste dell'utente
+    private static Scanner scanner;    //Per leggere le richieste da tastiera o da file di input
 
     // ---- Connessione con il Server ----
     private static Socket clientSocket;
+    private static List<String> userStatus;
 
 
     // ----- Operazioni Remote --------
@@ -66,7 +70,7 @@ public class Client {
         scanner.useDelimiter(System.lineSeparator()); //Evita di lasciare un '\n' in sospeso
         clientSocket = new Socket();
         gson = new Gson();
-
+        userStatus = new ArrayList<>();
         //Primo menu per la scelta di come accedere
         int operazione = -1;
         boolean exit = false;
@@ -77,16 +81,15 @@ public class Client {
         operazione = scegliOperazione();
 
         if(operazione == 1 || operazione == 2 ) { // Registrazione o Login
-            // TODO: 09/04/21 devo allocare dopo aver capito cosa vuole fare per evitare errori
             try {  //setto la RMI
                 r = LocateRegistry.getRegistry(ServerSettings.REGISTRY_PORT);
                 remote = r.lookup(ServerSettings.REGISRTY_OP_NAME);
                 serverObj = (RemoteRegistrationInterface) remote;
-
+// TODO: 09/04/21 dovrei farlo dopo che si è registrato
                 serverInterface = (ServerRMI) r.lookup("SERVER");
                 callbackObj = new NotifyEventInterfaceImpl();
                 stub = (NotifyEventInterface) UnicastRemoteObject.exportObject(callbackObj, 0);
-                serverInterface.registerForCallback(stub);
+                //serverInterface.registerForCallback(stub);
 
             } catch (AccessException e) {
                 e.printStackTrace();
@@ -112,11 +115,6 @@ public class Client {
                 exit = true;
                 System.err.println("Errore di connessione.");
             }
-            try {
-                serverInterface.registerForCallback(stub);
-            } catch (RemoteException e) {
-                e.printStackTrace();
-            }
             if(!exit && (message != null)) { //se l'op era di login
                 sendMessage(message);
                 ANSWER_CODE answer_code = rispostaServer();
@@ -128,6 +126,11 @@ public class Client {
         }
         if (!exit) {
                 System.out.println("Client: connesso al server.");
+            try { // se mi sono connesso senza problemi mi registro per le future callback
+                serverInterface.registerForCallback(stub);
+            } catch (RemoteException e) {
+                e.printStackTrace();
+            }
 
 
             // Loop principale in cui scegliere le operazioni
@@ -136,6 +139,7 @@ public class Client {
                     System.err.println("Connessione chiusa");
                     break;
                 }
+
                 Message msg = null;
                 printOperationMenu();
                 operazione = scegliOperazione();
@@ -366,12 +370,14 @@ public class Client {
     }
 
     private static Message showCard() {
-        String projectTitle, card;
+        String projectTitle, card, extra;
         System.out.print("Inserire il nome del Progetto:");
         projectTitle = scanner.next();
         System.out.print("Inserire il nome della Card:");
         card = scanner.next();
-        return new Message(nickname, null, OP_CODE.SHOW_CARD, projectTitle, card, null);
+        System.out.print("Inserire lista in cui si trova:"); // TODO: 25/01/21 Migliorare scelta lista!
+        extra = scanner.next();
+        return new Message(nickname, extra, OP_CODE.SHOW_CARD, projectTitle, card, null);
     }
 
     private static Message addCard() {
@@ -421,4 +427,5 @@ public class Client {
     private static Message closeConnection() {
         return new Message(nickname, null, OP_CODE.CLOSE_CONNECTION, null, null, null);
     }
+
 }

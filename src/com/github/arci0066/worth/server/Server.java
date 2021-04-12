@@ -62,6 +62,7 @@ public class Server {
         }
         System.out.println(path);
 
+        //Se presenti leggo i file di backup
         readServerBackup(path);
 
         //Lancio il thread Leader

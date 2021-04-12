@@ -7,6 +7,8 @@
 */
 package com.github.arci0066.worth.server;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.annotations.Expose;
 
 import java.io.*;
@@ -149,5 +151,19 @@ public class UsersList {
             out.writeObject(usersList);
         }
         catch(IOException ex) {ex.printStackTrace();}
+    }
+
+    public String jsonString() {
+        System.err.println("UserList Sono in JsonString start");
+        Gson gson = new GsonBuilder()
+                .excludeFieldsWithoutExposeAnnotation()
+                .create();
+        List<String> usersStatus = new ArrayList<>();
+        for (User u: usersList) {
+            usersStatus.add(u.getNickname()+" : "+u.getUserStatus());
+        }
+        System.out.println( "UserList"+gson.toJson(usersStatus) );
+        System.err.println("UserList Sono in JsonString end");
+        return gson.toJson(usersStatus);
     }
 }

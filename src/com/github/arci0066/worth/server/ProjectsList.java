@@ -115,7 +115,7 @@ public class ProjectsList  {
         try {
             projectsList.remove(project);
         } finally {
-            lock.readLock().unlock();
+            lock.writeLock().unlock();
         }
     }
 
@@ -149,7 +149,7 @@ public class ProjectsList  {
     public void serialize() {
         lock.readLock().lock();
         try (FileOutputStream fos = new FileOutputStream(projectsBackupFile);
-             ObjectOutputStream out = new ObjectOutputStream(fos);) {
+             ObjectOutputStream out = new ObjectOutputStream(fos)) {
             out.writeObject(projectsList);
         } catch (IOException ex) {
             ex.printStackTrace();

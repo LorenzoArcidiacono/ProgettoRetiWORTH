@@ -8,7 +8,7 @@ public class ServerSettings {
     public static final long THREAD_KEEP_ALIVE_TIME = 60L;
 
     // --------- Serializzazione -----------
-    public static final int maxUnsavedOperation = 5;
+    public static final int maxUnsavedOperation = 10; // TODO: 12/04/21 capire meglio sto numero
     public static final String serverBackupDirPath = "./extra/Server_Backup";
     public static final String usersBackupFile = "./extra/Server_Backup/Users.bkp";
     public static final String projectsBackupFile = "./extra/Server_Backup/Projects.bkp";
