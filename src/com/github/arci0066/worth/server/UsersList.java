@@ -1,8 +1,21 @@
+/*
+*
+* @Author Lorenzo Arcidiacono
+* @Mail l.arcidiacono1@studenti.unipi.it
+* @Matricola 534235
+*
+*/
 package com.github.arci0066.worth.server;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.annotations.Expose;
 
-import java.io.Serializable;
+import java.io.*;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -22,6 +35,14 @@ public class UsersList {
         lock = new ReentrantReadWriteLock();
     }
 
+    private UsersList(List<User> oldUserList) {
+        lock = new ReentrantReadWriteLock();
+        usersList = oldUserList;
+        for (User u : usersList) {
+            u.resetAfterBackup();
+        }
+    }
+
     // ------ Getters -------
     /* Doppio controllo per evitare che troppi Thread aspettino la mutex,
      * secondo controllo per casi in cui un thread si blocchi nell' if prima di completare
@@ -31,6 +52,16 @@ public class UsersList {
             synchronized (UsersList.class) {
                 if (instance == null)
                     instance = new UsersList();
+            }
+        }
+        return instance;
+    }
+
+    public static UsersList getSingletonInstance(List<User> oldUsersList) {
+        if (instance == null) {
+            synchronized (UsersList.class) {
+                if (instance == null)
+                    instance = new UsersList(oldUsersList);
             }
         }
         return instance;
@@ -91,9 +122,48 @@ public class UsersList {
 
     @Override
     public String toString() {
-        return "UsersList{" +
-                "usersList=" + usersList.toString() +
+        return "UsersList{" + usersList.toString() +
                 '}';
     }
 
+
+    // ----------- Serialization -----------
+    public void saveAll() {
+        Path path = Paths.get(ServerSettings.usersBackupFile);
+        lock.readLock().lock();
+        try (BufferedWriter writer = Files.newBufferedWriter(path, Charset.forName("UTF-8"))) {
+            for (User user : usersList) {
+                writer.write(user.getNickname() + ServerSettings.usersDataDivider + user.getPassword() + "\n" + ServerSettings.usersDivider);
+                /*writer.write("Name:"+user.getNickname()+"\n");
+                writer.write("Password:"+user.getPassword()+"\n");
+                writer.write("@\n");*/
+            }
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
+
+    public void serialize() {
+        try(FileOutputStream fos = new FileOutputStream(ServerSettings.serverBackupDirPath + "/Users.bkp");
+            ObjectOutputStream out = new ObjectOutputStream(fos);) {
+            out.writeObject(usersList);
+        }
+        catch(IOException ex) {ex.printStackTrace();}
+    }
+
+    public String jsonString() {
+        System.err.println("UserList Sono in JsonString start");
+        Gson gson = new GsonBuilder()
+                .excludeFieldsWithoutExposeAnnotation()
+                .create();
+        List<String> usersStatus = new ArrayList<>();
+        for (User u: usersList) {
+            usersStatus.add(u.getNickname()+" : "+u.getUserStatus());
+        }
+        System.out.println( "UserList"+gson.toJson(usersStatus) );
+        System.err.println("UserList Sono in JsonString end");
+        return gson.toJson(usersStatus);
+    }
 }

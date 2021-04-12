@@ -1,20 +1,30 @@
 package com.github.arci0066.worth.server;
 
 import com.github.arci0066.worth.enumeration.*;
+import com.google.gson.Gson;
 
+import java.io.*;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+
 //CLASSE THREAD SAFE
-public class Project implements com.github.arci0066.worth.interfaces.ProjectInterface {
+public class Project implements Serializable {
+    @Serial
+    private static final long serialVersionUID = 1;
+
     private static final String UTENTE_ERRATO = "Utente non membro del progetto.";
 
     private String projectTitle;
     private List<Card> todoList, inProgressList, toBeRevisedList, doneList;
     private List<String> projectUsers;
-    private ReadWriteLock lock;
+    transient private ReadWriteLock lock;
 
     //Come la implemento?
     // TODO: 12/01/21  private Chat projectChat;
@@ -32,8 +42,8 @@ public class Project implements com.github.arci0066.worth.interfaces.ProjectInte
         lock = new ReentrantReadWriteLock();
     }
 
+
     // ------ Getters -------
-    @Override
     public String getProjectTitle() {
         String str;
         lock.readLock().lock();
@@ -45,7 +55,6 @@ public class Project implements com.github.arci0066.worth.interfaces.ProjectInte
         return str;
     }
 
-    @Override
     public String getProjectUsers(String userNickname) {
         String str;
         if (isUserRegisteredToProject(userNickname)) {
@@ -59,7 +68,35 @@ public class Project implements com.github.arci0066.worth.interfaces.ProjectInte
         }
         return UTENTE_ERRATO;
     }
-// ------ Setters -------
+
+    /*
+     * REQUIRES: @params != null && userNickname appartiene al progetto
+     * RETURN: restituisce la card con titolo = cardTitle, null altrimenti
+     */
+    // TODO: 14/01/21 passare una copia? una stringa?
+    public Card getCard(String cardTitle, String cardStatus, String userNickname) {
+        Card card = null;
+        if (isUserRegisteredToProject(userNickname)){
+            lock.readLock().lock();
+            try {
+                card = findCardInList(cardTitle, getStatus(cardStatus));
+            } finally {
+                lock.readLock().unlock();
+            }
+        }
+        return card;
+    }
+
+    public String getCardHistory(String cardTitle, String cardStatus, String userNickname) {
+        String answer;
+        lock.readLock().lock();
+        try {
+            answer = getCard(cardTitle, cardStatus, userNickname).getCardHistory();
+        } finally {
+            lock.readLock().unlock();
+        }
+        return answer;
+    }
 
 // ------ Methods ------
 
@@ -70,7 +107,6 @@ public class Project implements com.github.arci0066.worth.interfaces.ProjectInte
      * 			|| PERMISSION_DENIED se l'utente non è registrato al progetto
      * 			|| OP_FAIL in caso di errore.
      */
-    @Override
     public ANSWER_CODE addCard(String cardTitle, String cardDescription, String userNickname) {
         if (!isUserRegisteredToProject(userNickname))
             return ANSWER_CODE.PERMISSION_DENIED;
@@ -100,7 +136,6 @@ public class Project implements com.github.arci0066.worth.interfaces.ProjectInte
      * 			|| PERMISSION_DENIED se l'utente non è registrato al progetto,
      * 			|| OP_FAIL in caso di altro errore.
      * */
-    @Override
     public ANSWER_CODE moveCard(String cardTitle, String fromListTitle, String toListTitle, String userNickname) {
         CARD_STATUS fromStatus = getStatus(fromListTitle);
         CARD_STATUS toStatus = getStatus(toListTitle);
@@ -146,7 +181,6 @@ public class Project implements com.github.arci0066.worth.interfaces.ProjectInte
      *			|| PERMISSION_DENIED se l'utente oldUserNickname non è registrato al progetto,
      *			|| OP_FAIL altrimenti.
      */
-    @Override
     public ANSWER_CODE addUser(String oldUserNickname, String newUserNickname) {
         if (!isUserRegisteredToProject(oldUserNickname))
             return ANSWER_CODE.PERMISSION_DENIED;
@@ -165,11 +199,18 @@ public class Project implements com.github.arci0066.worth.interfaces.ProjectInte
     }
 
     // TODO: 12/01/21 implementare
-    @Override
+
+    /*
+     * REQUIRES: userNickname != null && userNickname registrato al progetto
+     * EFFECTS: se tutte le card sono segnate come done chiude il progetto
+     * RETURN:  OP_OK in assenza di errori
+     *          || PERMISSIONE_DENIED se l'utente non è registrato al progetto
+     *          || PROJECT_NOT_FINISHED se ci sono card | card.getCardStatus != DONE
+    */
     public ANSWER_CODE cancelProject(String userNickname) {
         if (!isUserRegisteredToProject(userNickname))
             return ANSWER_CODE.PERMISSION_DENIED;
-
+// TODO: 01/03/21 controllare che tutte le card siano in done!
         lock.writeLock().lock();
         try {
             projectTitle = null;
@@ -187,25 +228,10 @@ public class Project implements com.github.arci0066.worth.interfaces.ProjectInte
 
 
     /*
-     * EFFECTS: Crea una stringa con il titolo di ogni card in ogni lista e gli utenti del progetto.
-     * RETURN: La stringa creata.
-     */
-    // TODO: 14/01/21 se non registrato non dovrebbe vedere la lista degli utenti
-    @Override
-    public String prettyPrint(String userNickname) {
-        String str;
-        lock.readLock().lock();
-        try {
-            str = showCards(userNickname) +
-                    ",\n Utenti Registrati: " + projectUsers;
-        } finally {
-            lock.readLock().unlock();
-        }
-        return str;
-    }
-
-
-    @Override
+     * REQUIRES: userNickname registrato al progetto
+     * RETURN: una stringa conentente tutte le card del progetto suddivise nelle liste in assenza di errori
+     *          || PERMISSION_DENIED altrimenti
+    */
     public String showCards(String userNickname) {
         String answer;
         if (isUserRegisteredToProject(userNickname)) {
@@ -221,40 +247,29 @@ public class Project implements com.github.arci0066.worth.interfaces.ProjectInte
             }
             return answer;
         }
-        return UTENTE_ERRATO;
+        // TODO: 01/03/21 cambiare con una risposta standard
+        return ANSWER_CODE.PERMISSION_DENIED.toString();
     }
+
+
 
     /*
-     * REQUIRES:
-     * EFFECTS:
-     * RETURN:
+     * EFFECTS: Crea una stringa con il titolo di ogni card in ogni lista e gli utenti del progetto.
+     * RETURN: La stringa creata.
      */
-    // TODO: 14/01/21 passare una copia? una stringa?
-    @Override
-    public Card getCard(String cardTitle, String cardStatus, String userNickname) {
-        Card card = null;
-        if (isUserRegisteredToProject(userNickname)){
-            lock.readLock().lock();
-            try {
-                card = findCardInList(cardTitle, getStatus(cardStatus));
-            } finally {
-                lock.readLock().unlock();
-            }
-        }
-        return card;
-    }
-
-    @Override
-    public String getCardHistory(String cardTitle, String cardStatus, String userNickname) {
-        String answer;
+    // TODO: 14/01/21 se non registrato non dovrebbe vedere la lista degli utenti
+    public String prettyPrint(String userNickname) {
+        String str;
         lock.readLock().lock();
         try {
-            answer = getCard(cardTitle, cardStatus, userNickname).getCardHistory();
+            str = showCards(userNickname) +
+                    ",\n Utenti Registrati: " + projectUsers;
         } finally {
             lock.readLock().unlock();
         }
-        return answer;
+        return str;
     }
+
 //    ------- Private Methods --------
 
     /*
@@ -292,6 +307,22 @@ public class Project implements com.github.arci0066.worth.interfaces.ProjectInte
     }
 
     /*
+     * EFFECTS: Controlla se l'utente è registrato al progetto.
+     * RETURN: true se lo è, false altrimenti.
+     */
+    private boolean isUserRegisteredToProject(String userNickname) {
+        boolean answer;
+        lock.readLock().lock();
+        try {
+            answer = projectUsers.contains(userNickname);
+        } finally {
+            lock.readLock().unlock(); /* Rilascio la lock, l'utente non può essere rimosso da altri thread */
+        }
+        return answer;
+    }
+
+    //----------------- Status Select --------------------------
+    /*
      * RETURN: La lista relativa al titolo della lista.
      */
     private List<Card> getList(CARD_STATUS listTitle) {
@@ -317,6 +348,7 @@ public class Project implements com.github.arci0066.worth.interfaces.ProjectInte
     }
 
     private CARD_STATUS getStatus(String cardStatus) {
+        System.err.println(cardStatus);
         cardStatus=cardStatus.toUpperCase();
         return switch (cardStatus) {
             case "TODO" -> CARD_STATUS.TODO;
@@ -327,21 +359,8 @@ public class Project implements com.github.arci0066.worth.interfaces.ProjectInte
         };
     }
 
-    /*
-     * EFFECTS: Controlla se l'utente è registrato al progetto.
-     * RETURN: true se lo è, false altrimenti.
-     */
-    private boolean isUserRegisteredToProject(String userNickname) {
-        boolean answer;
-        lock.readLock().lock();
-        try {
-            answer = projectUsers.contains(userNickname);
-        } finally {
-            lock.readLock().unlock(); /* Rilascio la lock, l'utente non può essere rimosso da altri thread */
-        }
-        return answer;
-    }
 
+// ---------- Closing && Backup methods -----------------
     private void emptyList(List<Card> cardList) {
         lock.writeLock().lock();
         try {
@@ -354,4 +373,62 @@ public class Project implements com.github.arci0066.worth.interfaces.ProjectInte
         }
     }
 
+    public void saveCard(Path path) {
+        lock.readLock().lock();
+        try {
+            for (Card crd : todoList) {
+                backupCard(path, crd);
+            }
+            for (Card crd : inProgressList) {
+                backupCard(path,crd);
+            }
+            for (Card crd : toBeRevisedList) {
+                backupCard(path,crd);
+            }
+            for (Card crd : doneList) {
+                backupCard(path,crd);
+            }
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
+
+    private void backupCard(Path path, Card crd) {
+        Path cardPath;
+        cardPath = Paths.get(path +"/"+ crd.getCardTitle()+".txt");
+        try(BufferedWriter writer = Files.newBufferedWriter(cardPath, Charset.forName("UTF-8"))){
+            writer.write("Title: "+ crd.getCardTitle()+"\n");
+            writer.write("Description: "+ crd.getCardDescription()+"\n");
+            writer.write("History: "+crd.getCardHistory()+"\n");
+        }catch(IOException ex){
+            ex.printStackTrace();
+        }
+    }
+
+    public void saveUsersList(Path userListPath) {
+        Gson gson = new Gson();
+        try {
+            BufferedWriter writer = Files.newBufferedWriter(userListPath, Charset.forName("UTF-8"));
+            writer.write(gson.toJson(projectUsers));
+            writer.flush();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void resetAfterBackup() {
+        for (Card c: todoList) {
+            System.out.println(c.toString());
+        }
+        for (Card c: inProgressList) {
+            System.out.println(c.toString());
+        }
+        for (Card c: toBeRevisedList) {
+            System.out.println(c.toString());
+        }
+        for (Card c: doneList) {
+            System.out.println(c.toString());
+        }
+        lock = new ReentrantReadWriteLock();
+    }
 }
