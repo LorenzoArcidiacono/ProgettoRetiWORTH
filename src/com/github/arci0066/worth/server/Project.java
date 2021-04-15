@@ -4,7 +4,10 @@ import com.github.arci0066.worth.enumeration.*;
 import com.google.gson.Gson;
 
 import java.io.*;
+import java.net.InetAddress;
+import java.net.MulticastSocket;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -27,18 +30,36 @@ public class Project implements Serializable {
     transient private ReadWriteLock lock;
 
     //Come la implemento?
-    // TODO: 12/01/21  private Chat projectChat;
+    //--------- CHAT ----------
+    transient private MulticastSocket ms;
+    transient private InetAddress ia;
+    transient private List<String> chatMsgs;
+    transient private int port;
+    transient private String address;
 
 
     // ------ Constructors ------
-    public Project(String projectTitle, String userNickname) {
+    public Project(String projectTitle, String userNickname, String address, int port) {
         this.projectTitle = projectTitle;
         projectUsers = new ArrayList<>();
+        projectUsers.add(userNickname);
+
         todoList = new ArrayList<>();
         inProgressList = new ArrayList<>();
         toBeRevisedList = new ArrayList<>();
         doneList = new ArrayList<>();
-        projectUsers.add(userNickname);
+
+        try {
+            this.port = port;
+            this.address = address;
+            ms = new MulticastSocket(port);
+            ia = InetAddress.getByName(address);
+            ms.joinGroup(ia);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        chatMsgs = new ArrayList<>();
+
         lock = new ReentrantReadWriteLock();
     }
 
@@ -96,6 +117,11 @@ public class Project implements Serializable {
             lock.readLock().unlock();
         }
         return answer;
+    }
+
+    public String getChatAddress(){
+        // TODO: 15/04/21 lock e controllare per l' utente giusto
+        return address+":"+port;
     }
 
 // ------ Methods ------
@@ -347,6 +373,12 @@ public class Project implements Serializable {
         return selectedList;
     }
 
+
+    /*
+     * REQUIRES: cardStatus != null
+     * EFFECTS: restituisce il CARD_STATUS in base alla stringa passata
+     * RETURN: il CARD_STATUS corretto
+    */
     private CARD_STATUS getStatus(String cardStatus) {
         System.err.println(cardStatus);
         cardStatus=cardStatus.toUpperCase();
@@ -396,7 +428,7 @@ public class Project implements Serializable {
     private void backupCard(Path path, Card crd) {
         Path cardPath;
         cardPath = Paths.get(path +"/"+ crd.getCardTitle()+".txt");
-        try(BufferedWriter writer = Files.newBufferedWriter(cardPath, Charset.forName("UTF-8"))){
+        try(BufferedWriter writer = Files.newBufferedWriter(cardPath, StandardCharsets.UTF_8)){
             writer.write("Title: "+ crd.getCardTitle()+"\n");
             writer.write("Description: "+ crd.getCardDescription()+"\n");
             writer.write("History: "+crd.getCardHistory()+"\n");
@@ -405,6 +437,7 @@ public class Project implements Serializable {
         }
     }
 
+    // TODO: 12/04/21 eliminare
     public void saveUsersList(Path userListPath) {
         Gson gson = new Gson();
         try {
@@ -416,19 +449,18 @@ public class Project implements Serializable {
         }
     }
 
-    public void resetAfterBackup() {
-        for (Card c: todoList) {
-            System.out.println(c.toString());
+    public void resetAfterBackup(String address, int port) {
+        try {
+            this.port = port;
+            this.address = address;
+            ms = new MulticastSocket(port);
+            ia = InetAddress.getByName(address);
+            ms.joinGroup(ia);
+        } catch (IOException e) {
+            e.printStackTrace();
         }
-        for (Card c: inProgressList) {
-            System.out.println(c.toString());
-        }
-        for (Card c: toBeRevisedList) {
-            System.out.println(c.toString());
-        }
-        for (Card c: doneList) {
-            System.out.println(c.toString());
-        }
+        chatMsgs = new ArrayList<>();
         lock = new ReentrantReadWriteLock();
+
     }
 }

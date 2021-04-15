@@ -24,18 +24,36 @@ public class ProjectsList  {
     private List<Project> projectsList;
     ReadWriteLock lock;
 
+    private static String multicastIpPrefix = "239.0.0."; //prefisso per l'ip multicast, non cambia
+    private Integer lastUsedIP; //suffisso per l' indirizzo ip multicast
+    private int lastUsedPort; //porta per il multicast socket
+
 // ------ Constructors ------
 
     private ProjectsList() {
         projectsList = new ArrayList<>();
+
+        lastUsedIP = 0;
+        lastUsedPort = ServerSettings.REGISTRY_PORT;
+
         lock = new ReentrantReadWriteLock();
     }
 
     private ProjectsList(List<Project> oldProjects) {
         lock = new ReentrantReadWriteLock();
         projectsList = oldProjects;
+
+        lastUsedIP = 0;
+        lastUsedPort = ServerSettings.REGISTRY_PORT;
+
+        String suffix, address;
+
+        // TODO: 14/04/21 passare indirizzo e porta 
         for (Project p : projectsList) {
-            p.resetAfterBackup();
+            //alloco e sistemo le variabili che non sono salvate nel file di backup
+            suffix = (++lastUsedIP).toString();
+            address = multicastIpPrefix + suffix;
+            p.resetAfterBackup(address,--lastUsedPort);
         }
     }
 
@@ -59,7 +77,7 @@ public class ProjectsList  {
     }
 
     /*
-     * EFFECTS: instanzia un oggetto singleton della classe
+     * EFFECTS: instanzia un oggetto singleton della classe nel caso di backup
      * RETURN: l' istanza dell' oggetto
      */
     public static ProjectsList getSingletonInstance(List<Project> oldProjects) {
@@ -82,6 +100,8 @@ public class ProjectsList  {
         try {
             for (Project prj : projectsList) {
                 str += "\n* " + prj.getProjectTitle();
+                str += " -> " + prj.getChatAddress();
+
             }
         } finally {
             lock.readLock().unlock();
@@ -96,10 +116,15 @@ public class ProjectsList  {
      * REQUIRES: project != null
      * EFFECTS: aggiunge il progetto alla lista se questo non è esistente ( Nota. tutti i controlli sono fatti dal chiamante )
      */
-    public void add(Project project) {
+    public void add(String projectTitle, String userNickname) {
+        // TODO: 14/04/21 controllare che porta e indirizzo restino nei parametri
+        String suffix = (++lastUsedIP).toString();
+        String address = multicastIpPrefix + suffix;
+
+        System.out.println("Indirizzo chat:"+address+":"+(lastUsedPort-1));
         lock.writeLock().lock();
         try {
-            projectsList.add(project);
+            projectsList.add(new Project(projectTitle,userNickname,address,--lastUsedPort));
         } finally {
             lock.writeLock().unlock();
         }
@@ -178,5 +203,6 @@ public class ProjectsList  {
             lock.readLock().unlock();
         }
     }
+
 }
 

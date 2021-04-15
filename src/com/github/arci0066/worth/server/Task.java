@@ -108,6 +108,10 @@ public class Task extends Thread {
                 answer_code = cancelProject(message.getProjectTitle(), message.getSenderNickname());
                 break;
             }
+            case GET_PRJ_CHAT:{
+                string = getProjectChat(message.getProjectTitle(),message.getSenderNickname());
+                break;
+            }
             case CLOSE_CONNECTION: {
                 try {// TODO: 26/01/21 Synchronize connection?
                     connection.close();
@@ -267,7 +271,7 @@ public class Task extends Thread {
         }
         synchronized (projectsList) { // TODO ALTERNATIVE
             if (findProjectByTitle(projectTitle) == null) {
-                projectsList.add(new Project(projectTitle, userNickname));
+                projectsList.add(projectTitle, userNickname);
                 return ANSWER_CODE.OP_OK;
             }
         }
@@ -426,6 +430,21 @@ public class Task extends Thread {
         Project prj = findProjectByTitle(projectTitle);
         if (prj != null)
             return prj.getCardHistory(cardTitle, cardStatus, userNickname);
+
+        return null;
+    }
+
+    private String getProjectChat(String projectTitle, String senderNickname) {
+        if (isNull(projectTitle, senderNickname)) {
+            return null;
+        }
+        if (findUserByNickname(senderNickname) == null) {
+            return null;
+        }
+
+        Project prj = findProjectByTitle(projectTitle);
+        if (prj != null)
+            return prj.getChatAddress();
 
         return null;
     }

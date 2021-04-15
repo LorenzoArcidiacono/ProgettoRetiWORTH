@@ -151,11 +151,11 @@ public class Server {
         try(FileInputStream fis = new FileInputStream(usersBackupFile);
             ObjectInputStream in = new ObjectInputStream(fis)) {
             registeredUsersList = (List<User>) in.readObject();
-            usersList = UsersList.getSingletonInstance(registeredUsersList);
+            usersList = UsersList.getSingletonInstance(registeredUsersList); //setto la lista utenti a partire dal backup
             System.out.println("Backup utenti:"+usersList.getUsersNickname());
         }
         catch (FileNotFoundException e){
-            System.err.println("Nessun file di backup trovato.");
+            System.err.println("Nessun file di backup Utenti trovato.");
         }
         catch(IOException ex) {
             ex.printStackTrace();
@@ -169,11 +169,11 @@ public class Server {
         try(FileInputStream fis = new FileInputStream(projectsBackupFile);
             ObjectInputStream in = new ObjectInputStream(fis)) {
             oldProjectsList = (List<Project>) in.readObject();
-            projectsList = ProjectsList.getSingletonInstance(oldProjectsList);
+            projectsList = ProjectsList.getSingletonInstance(oldProjectsList); //setto la lista progetti a partire dal backup
             System.out.println("Backup progetti:"+ projectsList.getProjectsTitle());
         }
         catch (FileNotFoundException e){
-            System.err.println("Nessun file di backup trovato.");
+            System.err.println("Nessun file di backup Progetti trovato.");
         }
         catch(IOException ex) {
             ex.printStackTrace();

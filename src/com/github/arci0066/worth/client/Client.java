@@ -1,10 +1,10 @@
 /*
-*
-* @Author Lorenzo Arcidiacono
-* @Mail l.arcidiacono1@studenti.unipi.it
-* @Matricola 534235
-*
-*/
+ *
+ * @Author Lorenzo Arcidiacono
+ * @Mail l.arcidiacono1@studenti.unipi.it
+ * @Matricola 534235
+ *
+ */
 package com.github.arci0066.worth.client;
 
 import com.github.arci0066.worth.enumeration.ANSWER_CODE;
@@ -14,7 +14,6 @@ import com.github.arci0066.worth.interfaces.RemoteRegistrationInterface;
 import com.github.arci0066.worth.interfaces.ServerRMI;
 import com.github.arci0066.worth.server.Message;
 import com.github.arci0066.worth.server.ServerSettings;
-import com.github.arci0066.worth.server.User;
 import com.google.gson.Gson;
 
 import java.io.*;
@@ -39,6 +38,8 @@ public class Client {
     private static String password;
     private static String nickname;
     private static Scanner scanner;    //Per leggere le richieste da tastiera o da file di input
+
+    private static List<ChatAddress> chatAddresses;
 
     // ---- Connessione con il Server ----
     private static Socket clientSocket;
@@ -71,6 +72,9 @@ public class Client {
         clientSocket = new Socket();
         gson = new Gson();
         userStatus = new ArrayList<>();
+
+        chatAddresses = new ArrayList<>();
+
         //Primo menu per la scelta di come accedere
         int operazione = -1;
         boolean exit = false;
@@ -80,7 +84,7 @@ public class Client {
 
         operazione = scegliOperazione();
 
-        if(operazione == 1 || operazione == 2 ) { // Registrazione o Login
+        if (operazione == 1 || operazione == 2) { // Registrazione o Login
             try {  //setto la RMI
                 r = LocateRegistry.getRegistry(ServerSettings.REGISTRY_PORT);
                 remote = r.lookup(ServerSettings.REGISRTY_OP_NAME);
@@ -115,17 +119,17 @@ public class Client {
                 exit = true;
                 System.err.println("Errore di connessione.");
             }
-            if(!exit && (message != null)) { //se l'op era di login
+            if (!exit && (message != null)) { //se l'op era di login
                 sendMessage(message);
                 ANSWER_CODE answer_code = rispostaServer();
-                if(answer_code != ANSWER_CODE.OP_OK){ //se il login non è andato a buon fine
+                if (answer_code != ANSWER_CODE.OP_OK) { //se il login non è andato a buon fine
                     exit = true;
                     System.err.println("Chiusura dovuta a errore di Login.");
                 }
             }
         }
         if (!exit) {
-                System.out.println("Client: connesso al server.");
+            System.out.println("Client: connesso al server.");
             try { // se mi sono connesso senza problemi mi registro per le future callback
                 serverInterface.registerForCallback(stub);
             } catch (RemoteException e) {
@@ -160,10 +164,8 @@ public class Client {
                     case 11 -> msg = addCard();
                     case 12 -> msg = moveCard();
                     case 13 -> msg = getCardHistory();
-                    case 14, 15 -> {
-                        System.err.println("Non supportata.");
-                        break;
-                    }
+                    case 14 -> sendChatMessage();
+                    case 15 -> reciveChatMessages();
                     case 16 -> msg = cancelProject();
                     case 17 -> {
                         exit = true;
@@ -252,6 +254,17 @@ public class Client {
                 System.out.println("\n@> " + answer.getAnswerCode() + "\n");
                 if (answer.getAnswerCode().equals(ANSWER_CODE.OP_OK)) {
                     System.out.println("@> " + answer.getExtra() + "\n");
+                }
+                break;
+            }
+            case GET_PRJ_CHAT:{
+                System.out.println("\n@> chat ricevuta" + answer.getAnswerCode() + "\n");
+                if (answer.getAnswerCode().equals(ANSWER_CODE.OP_OK)) {
+                    try {
+                        chatAddresses.add(new ChatAddress(answer.getProjectTitle(),answer.getExtra()));
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
                 }
                 break;
             }
@@ -421,6 +434,87 @@ public class Client {
         System.out.print("Inserire il nome del Progetto:");
         projectTitle = scanner.next();
         return new Message(nickname, null, OP_CODE.CANCEL_PROJECT, projectTitle, null, null);
+    }
+
+    private static void sendChatMessage() {
+        String projectTitle, message;
+        ANSWER_CODE response;
+        ChatAddress chatAddress;
+        byte[] data;
+        DatagramPacket dp;
+        DatagramSocket ds;
+
+        System.out.print("Nome del Progetto: ");
+        projectTitle = scanner.next();
+        System.out.print("Messaggio: ");
+        message = scanner.next();
+
+        chatAddress = getProjectChat(projectTitle);
+        if (chatAddress == null) { //Caso in cui non abbia i riferimenti del progetto in memoria
+            Message request = new Message(nickname, null, OP_CODE.GET_PRJ_CHAT, projectTitle, null, null);
+            sendMessage(request);
+            response = rispostaServer();  // TODO: 15/04/21 in rispostaServer() devo salvare il chat address
+            if (response == ANSWER_CODE.OP_OK) {
+                chatAddress = getProjectChat(projectTitle); // TODO: 15/04/21 controllare che sia diverso da null, comunque è brutto
+            } else return; //Se c'è stato un errore o io non faccio parte dei membri del progetto non invio
+        }
+
+        data = message.getBytes();
+
+        try {
+            ds = new DatagramSocket();
+            dp = new DatagramPacket(data, data.length, chatAddress.getAddress(), chatAddress.getPort());
+            ds.send(dp);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static void reciveChatMessages() {
+        String projectTitle, message;
+        ANSWER_CODE response;
+        ChatAddress chatAddress;
+        byte[] data;
+        DatagramPacket dp;
+        MulticastSocket ms;
+
+        System.out.print("Nome del Progetto: ");
+        projectTitle = scanner.next();
+
+        chatAddress = getProjectChat(projectTitle);
+        if (chatAddress == null) { //Caso in cui non abbia i riferimenti del progetto in memoria
+            Message request = new Message(nickname, null, OP_CODE.GET_PRJ_CHAT, projectTitle, null, null);
+            sendMessage(request);
+            response = rispostaServer();  // TODO: 15/04/21 in rispostaServer() devo salvare il chat address
+            if (response == ANSWER_CODE.OP_OK) {
+                chatAddress = getProjectChat(projectTitle); // TODO: 15/04/21 controllare che sia diverso da null, comunque è brutto
+            } else return; //Se c'è stato un errore o io non faccio parte dei membri del progetto non invio
+        }
+
+        data = new byte[1024];
+
+        try {
+            ms = new MulticastSocket(chatAddress.getPort());
+            ms.joinGroup(chatAddress.getAddress());
+            while (true) {
+                dp = new DatagramPacket(data, data.length);
+                ms.receive(dp);
+                String s = new String(dp.getData(),0,dp.getLength());
+
+                System.out.println("Ricevuto: " + s);
+                if (s.contains("quit")) break;
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static ChatAddress getProjectChat(String projectTitle) {
+        for (ChatAddress ca : chatAddresses) {
+            if (ca.getProjectTitle().equals(projectTitle))
+                return ca;
+        }
+        return null;
     }
 
     // TODO: 26/01/21 Chiusura in caso di errore
