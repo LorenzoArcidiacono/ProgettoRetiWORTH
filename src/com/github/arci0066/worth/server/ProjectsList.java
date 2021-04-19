@@ -100,8 +100,6 @@ public class ProjectsList  {
         try {
             for (Project prj : projectsList) {
                 str += "\n* " + prj.getProjectTitle();
-                str += " -> " + prj.getChatAddress();
-
             }
         } finally {
             lock.readLock().unlock();

@@ -16,8 +16,8 @@ public class ChatAddress {
     public ChatAddress(String projectTitle, String socketAddress) throws IOException {
         this.projectTitle = projectTitle;
         String[] str = socketAddress.split(":");
-        System.out.println("chatAddress:"+socketAddress);
-        System.err.println("ia:"+str[0]+" port:"+str[1]);
+        //System.out.println("chatAddress:"+socketAddress);
+        //System.err.println("ia:"+str[0]+" port:"+str[1]);
         ia = InetAddress.getByName(str[0]);
         port = Integer.parseInt(str[1]);
         ms = new MulticastSocket(port);

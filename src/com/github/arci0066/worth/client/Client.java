@@ -28,6 +28,7 @@ import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import static java.lang.Thread.sleep;
 
@@ -40,6 +41,7 @@ public class Client {
     private static Scanner scanner;    //Per leggere le richieste da tastiera o da file di input
 
     private static List<ChatAddress> chatAddresses;
+    private static List<ChatMessages> chatMessages;
 
     // ---- Connessione con il Server ----
     private static Socket clientSocket;
@@ -73,7 +75,9 @@ public class Client {
         gson = new Gson();
         userStatus = new ArrayList<>();
 
-        chatAddresses = new ArrayList<>();
+        //Uso CopyOnWriteArrayList perchè sia thread safe
+        chatAddresses = new CopyOnWriteArrayList<>();
+        chatMessages = new CopyOnWriteArrayList<>();
 
         //Primo menu per la scelta di come accedere
         int operazione = -1;
@@ -135,7 +139,7 @@ public class Client {
             } catch (RemoteException e) {
                 e.printStackTrace();
             }
-
+            daemonChatSniffer();
 
             // Loop principale in cui scegliere le operazioni
             while (!exit) {
@@ -190,6 +194,7 @@ public class Client {
                 readerIn.close();
                 writerOut.close();
                 serverInterface.unregisterForCallback(stub);
+                // TODO: 19/04/21 chiudere i socket delle chat 
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -197,6 +202,8 @@ public class Client {
         System.out.println("Esco dal programma.");
         //Thread.currentThread().interrupt();
     }
+
+    //--------- CONNESSIONE COL SERVER ---------
 
     private static boolean openConnection() {
         try { //Prova a connettersi al server.
@@ -234,8 +241,8 @@ public class Client {
             while (!end && (message = readerIn.readLine()) != null) {
                 if (!message.contains(ServerSettings.MESSAGE_TERMINATION_CODE)) {
                     read += message;
-                    System.out.println("Task leggo " + read);
-                    System.out.println("Provo a uscire");
+                    //System.out.println("Task leggo " + read);
+                    //System.out.println("Provo a uscire");
                     //read = read.replace("END","");
                 } else
                     end = true;
@@ -244,7 +251,7 @@ public class Client {
             e.printStackTrace();
         }
         Message answer = gson.fromJson(read, Message.class);
-        System.out.println("Server answer:" + answer);
+        //System.out.println("Server answer:" + answer);
         switch (answer.getOperationCode()) {
             case LOGIN, LOGOUT, CREATE_PROJECT, ADD_CARD, ADD_MEMBER, MOVE_CARD, CANCEL_PROJECT: {
                 System.out.println("\n@> " + answer.getAnswerCode() + "\n");
@@ -257,15 +264,26 @@ public class Client {
                 }
                 break;
             }
-            case GET_PRJ_CHAT:{
-                System.out.println("\n@> chat ricevuta" + answer.getAnswerCode() + "\n");
+            case GET_PRJ_CHAT: {
+                System.out.println("\n@> chat ricevuta:" + answer.getExtra() + "\n");
                 if (answer.getAnswerCode().equals(ANSWER_CODE.OP_OK)) {
-                    try {
-                        chatAddresses.add(new ChatAddress(answer.getProjectTitle(),answer.getExtra()));
-                    } catch (IOException e) {
-                        e.printStackTrace();
+                    if (answer.getExtra().equals("Utente non membro del progetto.")) // TODO: 15/04/21 sarebbe carino metterlo come stringa predefinita
+                        System.out.println("@> " + answer.getExtra() + "\n");
+                    else {
+                        try {
+                            //synchronized (chatAddresses) {
+                                chatAddresses.add(new ChatAddress(answer.getProjectTitle(), answer.getExtra()));
+                            //}
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
                     }
                 }
+                break;
+            }
+            case GET_CHAT_HST: {
+                ChatMessages cm = new ChatMessages(answer.getProjectTitle(), answer.getExtra());
+                chatMessages.add(cm);
                 break;
             }
         }
@@ -298,8 +316,8 @@ public class Client {
                 "\n 11. Aggiungi una Card al progetto," +
                 "\n 12. Sposta una Card in un'altra Lista," +
                 "\n 13. Vedi la History della Card," +
-                "\n 14. Leggi la Chat del Progetto," +
-                "\n 15. Invia un Messaggio in Chat," +
+                "\n 14. Invia un Messaggio in una Chat," +
+                "\n 15. Leggi la Chat del Progetto," +
                 "\n 16. Cancella un Progetto," +
                 "\n 17. Esci.");
     }
@@ -439,7 +457,7 @@ public class Client {
     private static void sendChatMessage() {
         String projectTitle, message;
         ANSWER_CODE response;
-        ChatAddress chatAddress;
+        ChatAddress chatAddress = null;
         byte[] data;
         DatagramPacket dp;
         DatagramSocket ds;
@@ -448,15 +466,26 @@ public class Client {
         projectTitle = scanner.next();
         System.out.print("Messaggio: ");
         message = scanner.next();
+        message = "@" + nickname + ": " + message;
 
-        chatAddress = getProjectChat(projectTitle);
+        chatAddress = getProjectChatAddress(projectTitle);
         if (chatAddress == null) { //Caso in cui non abbia i riferimenti del progetto in memoria
             Message request = new Message(nickname, null, OP_CODE.GET_PRJ_CHAT, projectTitle, null, null);
             sendMessage(request);
             response = rispostaServer();  // TODO: 15/04/21 in rispostaServer() devo salvare il chat address
             if (response == ANSWER_CODE.OP_OK) {
-                chatAddress = getProjectChat(projectTitle); // TODO: 15/04/21 controllare che sia diverso da null, comunque è brutto
+                //Ricevo la chat fino a questo momento
+                request = new Message(nickname, null, OP_CODE.GET_CHAT_HST, projectTitle, null, null);
+                sendMessage(request);
+                rispostaServer();
+                System.out.println(findProjectChat(projectTitle).getMessages()); //Stampo i messaggi della chat
+                chatAddress = getProjectChatAddress(projectTitle); // TODO: 15/04/21 controllare che sia diverso da null, comunque è brutto
+                if (chatAddress == null) { //caso in cui la richiesta non sia andata a buon fine
+                    System.err.println("@> Messaggio non inviato.\n");
+                    return;
+                }
             } else return; //Se c'è stato un errore o io non faccio parte dei membri del progetto non invio
+            // TODO: 15/04/21 in realtà in ogni caso ritorna op_ok... dovrei cambiare questa cosa
         }
 
         data = message.getBytes();
@@ -481,39 +510,95 @@ public class Client {
         System.out.print("Nome del Progetto: ");
         projectTitle = scanner.next();
 
-        chatAddress = getProjectChat(projectTitle);
+        //se non sono iscritto alla chat mi iscrivo
+        chatAddress = getProjectChatAddress(projectTitle);
         if (chatAddress == null) { //Caso in cui non abbia i riferimenti del progetto in memoria
             Message request = new Message(nickname, null, OP_CODE.GET_PRJ_CHAT, projectTitle, null, null);
             sendMessage(request);
             response = rispostaServer();  // TODO: 15/04/21 in rispostaServer() devo salvare il chat address
-            if (response == ANSWER_CODE.OP_OK) {
-                chatAddress = getProjectChat(projectTitle); // TODO: 15/04/21 controllare che sia diverso da null, comunque è brutto
-            } else return; //Se c'è stato un errore o io non faccio parte dei membri del progetto non invio
-        }
-
-        data = new byte[1024];
-
-        try {
-            ms = new MulticastSocket(chatAddress.getPort());
-            ms.joinGroup(chatAddress.getAddress());
-            while (true) {
-                dp = new DatagramPacket(data, data.length);
-                ms.receive(dp);
-                String s = new String(dp.getData(),0,dp.getLength());
-
-                System.out.println("Ricevuto: " + s);
-                if (s.contains("quit")) break;
+            if (response == ANSWER_CODE.OP_OK) { //se l'iscrizione è andata a buon fine chiedo i messaggi precedenti
+                request = new Message(nickname, null, OP_CODE.GET_CHAT_HST, projectTitle, null, null);
+                sendMessage(request);
+                rispostaServer();
             }
-        } catch (IOException e) {
-            e.printStackTrace();
         }
+        System.out.println(findProjectChat(projectTitle).getMessages());
     }
 
-    private static ChatAddress getProjectChat(String projectTitle) {
-        for (ChatAddress ca : chatAddresses) {
-            if (ca.getProjectTitle().equals(projectTitle))
-                return ca;
+    private static void daemonChatSniffer() {
+        Thread t = new Thread() {
+            @Override
+            public void run() {
+                System.out.println("Daemon sniffer running");
+                //per ogni progetto di cui il client fa parte chiede al server il chat address
+                //per ogni progetto di cui fa parte chiede la lista dei messaggi vecchi e la salva
+
+                //Scorre la lista dei Progetti di cui il client fa parte
+                //per ogni chatAddress legge la lista dei messaggi con un timout dopo il quale va oltre
+                //salva i messagi in un' oggetto condiviso
+                int index = 0;
+                byte[] data = new byte[1024];
+                MulticastSocket ms;
+                ChatAddress chat;
+                boolean empty = false;
+
+                while (true) {
+                    //synchronized (chatAddresses) {
+                        if (chatAddresses.isEmpty()) {
+                            try { // TODO: 19/04/21 questo tiene chataddress occupato
+                                Thread.sleep(100);
+                                continue;
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
+                            }
+                        }
+                    //}
+                    //synchronized (chatAddresses) {
+                        chat = chatAddresses.get(index);
+                    //}
+                    ms = chat.getMulticastSocket();
+                    DatagramPacket dp = new DatagramPacket(data, data.length);
+                    empty = false;
+                    try {
+                        ms.setSoTimeout(1000);
+                        ms.receive(dp);
+                    } catch (SocketTimeoutException | SocketException e) {
+                        empty = true;
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                    if (!empty) {
+                        String s = new String(dp.getData(), 0, dp.getLength());
+                        ChatMessages cm = findProjectChat(chat.getProjectTitle());
+                        if (cm != null) {
+                            cm.add(s);
+                        } else
+                            System.err.println(chat.getProjectTitle() + "non trovata.");
+                    }
+                    index = (index + 1) % chatAddresses.size();
+                }
+            }
+        };
+        t.setDaemon(true);
+        t.start();
+    }
+
+    // TODO: 19/04/21 sync chat messagges
+    private static ChatMessages findProjectChat(String projectTitle) {
+        for (ChatMessages cm : chatMessages) {
+            if (cm.getProjectTitle().equals(projectTitle))
+                return cm;
         }
+        return null;
+    }
+
+    private static ChatAddress getProjectChatAddress(String projectTitle) {
+        //synchronized (chatAddresses) {
+            for (ChatAddress ca : chatAddresses) {
+                if (ca.getProjectTitle().equals(projectTitle))
+                    return ca;
+            }
+        //}
         return null;
     }
 

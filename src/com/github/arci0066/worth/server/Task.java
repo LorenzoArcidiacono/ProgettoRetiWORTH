@@ -112,6 +112,10 @@ public class Task extends Thread {
                 string = getProjectChat(message.getProjectTitle(),message.getSenderNickname());
                 break;
             }
+            case GET_CHAT_HST:{
+                string = getChatHistory(message.getProjectTitle(),message.getSenderNickname());
+                break;
+            }
             case CLOSE_CONNECTION: {
                 try {// TODO: 26/01/21 Synchronize connection?
                     connection.close();
@@ -444,7 +448,23 @@ public class Task extends Thread {
 
         Project prj = findProjectByTitle(projectTitle);
         if (prj != null)
-            return prj.getChatAddress();
+            return prj.getChatAddress(senderNickname);
+
+        return null;
+    }
+
+
+    private String getChatHistory(String projectTitle, String senderNickname) {
+        if (isNull(projectTitle, senderNickname)) {
+            return null;
+        }
+        if (findUserByNickname(senderNickname) == null) {
+            return null;
+        }
+
+        Project prj = findProjectByTitle(projectTitle);
+        if (prj != null)
+            return prj.getChatHistory(senderNickname);
 
         return null;
     }
