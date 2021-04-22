@@ -39,6 +39,7 @@ public class UsersList {
         lock = new ReentrantReadWriteLock();
         usersList = oldUserList;
         for (User u : usersList) {
+            //alloco e sistemo le variabili che non sono salvate nel file di backup
             u.resetAfterBackup();
         }
     }

@@ -24,11 +24,11 @@ public class RemoteRegistration extends RemoteServer implements RemoteRegistrati
     }
 
     @Override
-    public ANSWER_CODE register(String userNIckname, String password) throws RemoteException {
+    public ANSWER_CODE register(String userNickname, String password) throws RemoteException {
         System.out.println("REGISTER " + usersList.toString());
-        if (userNIckname != null && password != null) {
-            if (usersList.findUser(userNIckname) == null) {
-                User user = new User(userNIckname, password,false);
+        if (userNickname != null && password != null) {
+            if (usersList.findUser(userNickname) == null) {
+                User user = new User(userNickname, password,false);
                 user.login();
                 usersList.add(user);
                 /*String registeredUserList;
@@ -39,7 +39,7 @@ public class RemoteRegistration extends RemoteServer implements RemoteRegistrati
                 server.update(registeredUserList);*/
                 return ANSWER_CODE.OP_OK;
             }
-            System.err.println("Err: " + userNIckname + "," + password);
+            System.err.println("Err: " + userNickname + "," + password);
             return ANSWER_CODE.EXISTING_USER;
         }
         return ANSWER_CODE.OP_FAIL;

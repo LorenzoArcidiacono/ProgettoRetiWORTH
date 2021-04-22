@@ -1,10 +1,10 @@
 /*
-*
-* @Author Lorenzo Arcidiacono
-* @Mail l.arcidiacono1@studenti.unipi.it
-* @Matricola 534235
-*
-*/
+ *
+ * @Author Lorenzo Arcidiacono
+ * @Mail l.arcidiacono1@studenti.unipi.it
+ * @Matricola 534235
+ *
+ */
 package com.github.arci0066.worth.client;
 
 import com.github.arci0066.worth.enumeration.ANSWER_CODE;
@@ -14,7 +14,6 @@ import com.github.arci0066.worth.interfaces.RemoteRegistrationInterface;
 import com.github.arci0066.worth.interfaces.ServerRMI;
 import com.github.arci0066.worth.server.Message;
 import com.github.arci0066.worth.server.ServerSettings;
-import com.github.arci0066.worth.server.User;
 import com.google.gson.Gson;
 
 import java.io.*;
@@ -29,32 +28,41 @@ import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import static java.lang.Thread.sleep;
 
 public class Client {
+
+
+    // -------- DATI UTENTE ---------
+    private static String password;
+    private static String nickname;
+
+    // ------- CHAT DEI PROGETTI --------
+    private static List<ChatAddress> chatAddresses;
+    private static List<ChatMessages> chatMessages;
+
+    // ---- CONNESSIONE CON IL SERVER ----
+    private static Socket clientSocket;
     private static BufferedReader readerIn = null;
     private static BufferedWriter writerOut = null;
 
-    private static String password;
-    private static String nickname;
-    private static Scanner scanner;    //Per leggere le richieste da tastiera o da file di input
-
-    // ---- Connessione con il Server ----
-    private static Socket clientSocket;
+    // ------- MEMORIA UTENTI -------
     private static List<String> userStatus;
 
-
-    // ----- Operazioni Remote --------
+    // ----- OPERAZIONI REMOTE --------
     private static RemoteRegistrationInterface serverObj;
     private static Remote remote;
-    private static Registry r;
+    private static Registry registry;
     private static ServerRMI serverInterface = null;
     private static NotifyEventInterface callbackObj;
     private static NotifyEventInterface stub = null;
 
+    // ------- UTILITÀ ----------
     private static Gson gson;
     private static File inputFileTest;
+    private static Scanner scanner;    //Per leggere le richieste da tastiera o da file di input
 
     // TODO: 08/02/21 farlo diventare un main e pulire tutto!
     public static void main(String[] args) {
@@ -71,6 +79,11 @@ public class Client {
         clientSocket = new Socket();
         gson = new Gson();
         userStatus = new ArrayList<>();
+
+        //Uso CopyOnWriteArrayList perchè sia thread safe
+        chatAddresses = new CopyOnWriteArrayList<>();
+        chatMessages = new CopyOnWriteArrayList<>();
+
         //Primo menu per la scelta di come accedere
         int operazione = -1;
         boolean exit = false;
@@ -80,13 +93,13 @@ public class Client {
 
         operazione = scegliOperazione();
 
-        if(operazione == 1 || operazione == 2 ) { // Registrazione o Login
+        if (operazione == 1 || operazione == 2) { // Registrazione o Login
             try {  //setto la RMI
-                r = LocateRegistry.getRegistry(ServerSettings.REGISTRY_PORT);
-                remote = r.lookup(ServerSettings.REGISRTY_OP_NAME);
+                registry = LocateRegistry.getRegistry(ServerSettings.REGISTRY_PORT);
+                remote = registry.lookup(ServerSettings.REGISRTY_OP_NAME);
                 serverObj = (RemoteRegistrationInterface) remote;
 // TODO: 09/04/21 dovrei farlo dopo che si è registrato
-                serverInterface = (ServerRMI) r.lookup("SERVER");
+                serverInterface = (ServerRMI) registry.lookup("SERVER");
                 callbackObj = new NotifyEventInterfaceImpl();
                 stub = (NotifyEventInterface) UnicastRemoteObject.exportObject(callbackObj, 0);
                 //serverInterface.registerForCallback(stub);
@@ -115,23 +128,23 @@ public class Client {
                 exit = true;
                 System.err.println("Errore di connessione.");
             }
-            if(!exit && (message != null)) { //se l'op era di login
+            if (!exit && (message != null)) { //se l'op era di login
                 sendMessage(message);
-                ANSWER_CODE answer_code = rispostaServer();
-                if(answer_code != ANSWER_CODE.OP_OK){ //se il login non è andato a buon fine
+                ANSWER_CODE answer_code = serverAnswer();
+                if (answer_code != ANSWER_CODE.OP_OK) { //se il login non è andato a buon fine
                     exit = true;
                     System.err.println("Chiusura dovuta a errore di Login.");
                 }
             }
         }
         if (!exit) {
-                System.out.println("Client: connesso al server.");
+            System.out.println("Client: connesso al server.");
             try { // se mi sono connesso senza problemi mi registro per le future callback
                 serverInterface.registerForCallback(stub);
             } catch (RemoteException e) {
                 e.printStackTrace();
             }
-
+            daemonChatSniffer();
 
             // Loop principale in cui scegliere le operazioni
             while (!exit) {
@@ -160,10 +173,8 @@ public class Client {
                     case 11 -> msg = addCard();
                     case 12 -> msg = moveCard();
                     case 13 -> msg = getCardHistory();
-                    case 14, 15 -> {
-                        System.err.println("Non supportata.");
-                        break;
-                    }
+                    case 14 -> sendChatMessage();
+                    case 15 -> reciveChatMessages();
                     case 16 -> msg = cancelProject();
                     case 17 -> {
                         exit = true;
@@ -177,7 +188,7 @@ public class Client {
                 if (msg != null) {
                     sendMessage(msg);
                     if (!msg.getOperationCode().equals(OP_CODE.CLOSE_CONNECTION) && !msg.getOperationCode().equals(OP_CODE.LOGOUT))
-                        rispostaServer();
+                        serverAnswer();
                 }
 
             }
@@ -188,6 +199,7 @@ public class Client {
                 readerIn.close();
                 writerOut.close();
                 serverInterface.unregisterForCallback(stub);
+                // TODO: 19/04/21 chiudere i socket delle chat 
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -195,6 +207,8 @@ public class Client {
         System.out.println("Esco dal programma.");
         //Thread.currentThread().interrupt();
     }
+
+    //--------- CONNESSIONE COL SERVER ---------
 
     private static boolean openConnection() {
         try { //Prova a connettersi al server.
@@ -224,7 +238,7 @@ public class Client {
         }
     }
 
-    private static ANSWER_CODE rispostaServer() {
+    private static ANSWER_CODE serverAnswer() {
         String message = "", read = "";
         boolean end = false;
         // TODO: 26/01/21 Capire come gestire questo while
@@ -232,8 +246,8 @@ public class Client {
             while (!end && (message = readerIn.readLine()) != null) {
                 if (!message.contains(ServerSettings.MESSAGE_TERMINATION_CODE)) {
                     read += message;
-                    System.out.println("Task leggo " + read);
-                    System.out.println("Provo a uscire");
+                    //System.out.println("Task leggo " + read);
+                    //System.out.println("Provo a uscire");
                     //read = read.replace("END","");
                 } else
                     end = true;
@@ -242,7 +256,7 @@ public class Client {
             e.printStackTrace();
         }
         Message answer = gson.fromJson(read, Message.class);
-        System.out.println("Server answer:" + answer);
+        //System.out.println("Server answer:" + answer);
         switch (answer.getOperationCode()) {
             case LOGIN, LOGOUT, CREATE_PROJECT, ADD_CARD, ADD_MEMBER, MOVE_CARD, CANCEL_PROJECT: {
                 System.out.println("\n@> " + answer.getAnswerCode() + "\n");
@@ -255,12 +269,34 @@ public class Client {
                 }
                 break;
             }
+            case GET_PRJ_CHAT: {
+                System.out.println("\n@> chat ricevuta:" + answer.getExtra() + "\n");
+                if (answer.getAnswerCode().equals(ANSWER_CODE.OP_OK)) {
+                    if (answer.getExtra().equals("Utente non membro del progetto.")) // TODO: 15/04/21 sarebbe carino metterlo come stringa predefinita
+                        System.out.println("@> " + answer.getExtra() + "\n");
+                    else {
+                        try {
+                            //synchronized (chatAddresses) {
+                                chatAddresses.add(new ChatAddress(answer.getProjectTitle(), answer.getExtra()));
+                            //}
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
+                break;
+            }
+            case GET_CHAT_HST: {
+                ChatMessages cm = new ChatMessages(answer.getProjectTitle(), answer.getExtra());
+                chatMessages.add(cm);
+                break;
+            }
         }
         return answer.getAnswerCode();
     }
 
 
-    // -------- METODI PRIVATI ---------
+    // -------- OPERAZIONI MENU ---------
     private static void printWelcomeMenu() {
         System.out.println("Scegli operazione:\n 1. Registra Utente.\n 2. Login Utente.\n 3. Annulla e Esci.");
     }
@@ -285,13 +321,13 @@ public class Client {
                 "\n 11. Aggiungi una Card al progetto," +
                 "\n 12. Sposta una Card in un'altra Lista," +
                 "\n 13. Vedi la History della Card," +
-                "\n 14. Leggi la Chat del Progetto," +
-                "\n 15. Invia un Messaggio in Chat," +
+                "\n 14. Invia un Messaggio in una Chat," +
+                "\n 15. Leggi la Chat del Progetto," +
                 "\n 16. Cancella un Progetto," +
                 "\n 17. Esci.");
     }
 
-    //------ POSSIBILI OPERAZIONI ------
+    //------ POSSIBILI OPERAZIONI RICHIESTE ------
 
     // TODO: 27/01/21 cambiare ritorno
     private static boolean register() {
@@ -327,10 +363,12 @@ public class Client {
         return new Message(nickname, null, OP_CODE.LOGOUT, null, null, null);
     }
 
+    // TODO: 20/04/21 rendere questo un metodo locale in base a una struttura locale
     private static Message listUsers() {
         return new Message(nickname, null, OP_CODE.LIST_USER, null, null, null);
     }
 
+    // TODO: 20/04/21 rendere questo un metodo locale in base a una struttura locale
     private static Message listOnlineUsers() {
         return new Message(nickname, null, OP_CODE.LIST_ONLINE_USER, null, null, null);
     }
@@ -423,6 +461,160 @@ public class Client {
         return new Message(nickname, null, OP_CODE.CANCEL_PROJECT, projectTitle, null, null);
     }
 
+    private static void sendChatMessage() {
+        String projectTitle, message;
+        ANSWER_CODE response = ANSWER_CODE.OP_FAIL;
+        ChatAddress chatAddress = null;
+        byte[] data;
+        DatagramPacket dp;
+        DatagramSocket ds;
+
+        System.out.print("Nome del Progetto: ");
+        projectTitle = scanner.next();
+        System.out.print("Messaggio: ");
+        message = scanner.next();
+        message = "@" + nickname + ": " + message;
+
+        chatAddress = getProjectChatAddress(projectTitle);
+        if (chatAddress == null) { //Caso in cui non abbia i riferimenti del progetto in memoria
+            response = requestProjectChat(projectTitle);
+            // TODO: 15/04/21 in realtà in ogni caso ritorna op_ok... dovrei cambiare questa cosa
+            if (response != ANSWER_CODE.OP_OK) {
+                System.err.println("@> " + response + ": messaggio non inviato.");
+                return;
+            }
+            chatAddress = getProjectChatAddress(projectTitle);
+        }
+        data = message.getBytes();
+
+        try {
+            ds = new DatagramSocket();
+            dp = new DatagramPacket(data, data.length, chatAddress.getAddress(), chatAddress.getPort());
+            ds.send(dp);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static void reciveChatMessages() {
+        String projectTitle, message;
+        ANSWER_CODE response;
+        ChatAddress chatAddress;
+        byte[] data;
+        DatagramPacket dp;
+        MulticastSocket ms;
+
+        System.out.print("Nome del Progetto: ");
+        projectTitle = scanner.next();
+
+        //se non sono iscritto alla chat mi iscrivo
+        chatAddress = getProjectChatAddress(projectTitle);
+        if (chatAddress == null) { //Caso in cui non abbia i riferimenti del progetto in memoria
+            requestProjectChat(projectTitle);
+        }
+        System.out.println(findProjectChat(projectTitle).getMessages());
+    }
+
+    // --------- OPERAZIONI PER LA CHAT ---------
+
+    /*
+     * EFFECTS: avvia un thread daemon che si occupa di ricevere i messaggi dalle chat dei progetti
+     *          e li salva in memoria.
+    */
+    private static void daemonChatSniffer() {
+        Thread t = new Thread() {
+            @Override
+            public void run() {
+                System.out.println("Daemon sniffer running");
+                //per ogni progetto di cui il client fa parte chiede al server il chat address
+                //per ogni progetto di cui fa parte chiede la lista dei messaggi vecchi e la salva
+
+                //Scorre la lista dei Progetti di cui il client fa parte
+                //per ogni chatAddress legge la lista dei messaggi con un timout dopo il quale va oltre
+                //salva i messagi in un' oggetto condiviso
+                int index = 0;
+                byte[] data = new byte[1024];
+                MulticastSocket ms;
+                ChatAddress chat;
+                boolean empty = false;
+
+                while (true) {
+                    //synchronized (chatAddresses) {
+                        if (chatAddresses.isEmpty()) {
+                            try { // TODO: 19/04/21 questo tiene chataddress occupato e fa un po' schifo
+                                Thread.sleep(1000);
+                                continue;
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
+                            }
+                        }
+                    //}
+                    //synchronized (chatAddresses) {
+                        chat = chatAddresses.get(index);
+                    //}
+                    ms = chat.getMulticastSocket();
+                    DatagramPacket dp = new DatagramPacket(data, data.length);
+                    empty = false;
+                    try {
+                        ms.setSoTimeout(1000);
+                        ms.receive(dp);
+                    } catch (SocketTimeoutException | SocketException e) {
+                        empty = true;
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                    if (!empty) {
+                        String s = new String(dp.getData(), 0, dp.getLength());
+                        ChatMessages cm = findProjectChat(chat.getProjectTitle());
+                        if (cm != null) {
+                            cm.add(s);
+                        } else
+                            System.err.println(chat.getProjectTitle() + "non trovata.");
+                    }
+                    index = (index + 1) % chatAddresses.size();
+                }
+            }
+        };
+        t.setDaemon(true);
+        t.start();
+    }
+
+    // TODO: 19/04/21 sync chat messagges
+    // TODO: 20/04/21 mettere insieme chatMessages e chatAddresses 
+    private static ChatMessages findProjectChat(String projectTitle) {
+        for (ChatMessages cm : chatMessages) {
+            if (cm.getProjectTitle().equals(projectTitle))
+                return cm;
+        }
+        return null;
+    }
+
+    private static ChatAddress getProjectChatAddress(String projectTitle) {
+        //synchronized (chatAddresses) {
+            for (ChatAddress ca : chatAddresses) {
+                if (ca.getProjectTitle().equals(projectTitle))
+                    return ca;
+            }
+        //}
+        return null;
+    }
+
+    private static ANSWER_CODE requestProjectChat(String projectTitle) {
+        ANSWER_CODE response;
+        Message request = new Message(nickname, null, OP_CODE.GET_PRJ_CHAT, projectTitle, null, null);
+        sendMessage(request);
+        response = serverAnswer();  // TODO: 15/04/21 in rispostaServer() devo salvare il chat address
+        if (response == ANSWER_CODE.OP_OK) { //se l'iscrizione è andata a buon fine chiedo i messaggi precedenti
+            request = new Message(nickname, null, OP_CODE.GET_CHAT_HST, projectTitle, null, null);
+            sendMessage(request);
+            return serverAnswer();
+        }
+        return response;
+    }
+
+
+    // ------- CHIUSURA ------
+    
     // TODO: 26/01/21 Chiusura in caso di errore
     private static Message closeConnection() {
         return new Message(nickname, null, OP_CODE.CLOSE_CONNECTION, null, null, null);

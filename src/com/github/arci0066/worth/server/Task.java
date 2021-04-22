@@ -14,11 +14,15 @@ import com.google.gson.Gson;
 import java.io.IOException;
 
 public class Task extends Thread {
+    // ----- COMUNICAZIONE -----
     Message message;
     Connection connection;
-    Gson gson;
+
+    // --- MEMORIA DATI -----
     private ProjectsList projectsList;
     private UsersList registeredUsersList;
+
+    Gson gson;
 
     // ------ Constructors ------
     public Task(Connection connection) {
@@ -106,6 +110,14 @@ public class Task extends Thread {
             }
             case CANCEL_PROJECT: {
                 answer_code = cancelProject(message.getProjectTitle(), message.getSenderNickname());
+                break;
+            }
+            case GET_PRJ_CHAT:{
+                string = getProjectChat(message.getProjectTitle(),message.getSenderNickname());
+                break;
+            }
+            case GET_CHAT_HST:{
+                string = getChatHistory(message.getProjectTitle(),message.getSenderNickname());
                 break;
             }
             case CLOSE_CONNECTION: {
@@ -267,7 +279,7 @@ public class Task extends Thread {
         }
         synchronized (projectsList) { // TODO ALTERNATIVE
             if (findProjectByTitle(projectTitle) == null) {
-                projectsList.add(new Project(projectTitle, userNickname));
+                projectsList.add(projectTitle, userNickname);
                 return ANSWER_CODE.OP_OK;
             }
         }
@@ -426,6 +438,37 @@ public class Task extends Thread {
         Project prj = findProjectByTitle(projectTitle);
         if (prj != null)
             return prj.getCardHistory(cardTitle, cardStatus, userNickname);
+
+        return null;
+    }
+
+    private String getProjectChat(String projectTitle, String senderNickname) {
+        if (isNull(projectTitle, senderNickname)) {
+            return null;
+        }
+        if (findUserByNickname(senderNickname) == null) {
+            return null;
+        }
+
+        Project prj = findProjectByTitle(projectTitle);
+        if (prj != null)
+            return prj.getChatAddress(senderNickname);
+
+        return null;
+    }
+
+
+    private String getChatHistory(String projectTitle, String senderNickname) {
+        if (isNull(projectTitle, senderNickname)) {
+            return null;
+        }
+        if (findUserByNickname(senderNickname) == null) {
+            return null;
+        }
+
+        Project prj = findProjectByTitle(projectTitle);
+        if (prj != null)
+            return prj.getChatHistory(senderNickname);
 
         return null;
     }

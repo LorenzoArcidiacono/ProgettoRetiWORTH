@@ -132,8 +132,7 @@ public class User implements Serializable {
         String str;
         lock.readLock().lock();
         try {
-            str = "com.github.arci0066.worth.User{" +
-                    "nickname='" + nickname + '\'' +
+            str = "{ nickname='" + nickname + '\'' +
                     ": " + userStatus +
                     '}';
         } finally {
@@ -144,8 +143,8 @@ public class User implements Serializable {
 
 
     public void resetAfterBackup() {
-        password = decryptPassword();
+        password = decryptPassword(); //restituisce la password reale
+        userStatus = USER_STATUS.OFFLINE; //setto tutti gli utenti offline
         lock = new ReentrantReadWriteLock();
-        userStatus = USER_STATUS.OFFLINE;
     }
 }
