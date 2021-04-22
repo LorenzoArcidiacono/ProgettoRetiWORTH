@@ -26,6 +26,12 @@ public class ChatMessages {
         return projectTitle;
     }
 
+
+    /*
+     * EFFECTS: restituisce una lista dei messaggi in memoria fino a questo momento,
+     *          una volta restituiti li cancella dalla memoria
+     * RETURN:
+    */
     public String getMessages() {
         String response= "";
         if(messages.isEmpty())

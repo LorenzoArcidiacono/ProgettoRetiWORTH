@@ -7,8 +7,9 @@
 */
 package com.github.arci0066.worth.enumeration;
 
+
+// Codici delle operazioni che possono essere richieste al server
 public enum OP_CODE {
-    REGISTER,
     LOGIN,
     LOGOUT,
     LIST_USER,

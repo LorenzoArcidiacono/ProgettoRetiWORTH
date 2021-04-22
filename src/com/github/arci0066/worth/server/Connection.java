@@ -8,7 +8,8 @@ public class Connection {
     BufferedReader reader;
     BufferedWriter writer;
 
-    boolean inUse;
+    boolean inUse; //booleano per indicare se lo user collegato a questa connessione
+                    // è servito da un Task Thread in questo momento
 
     // ------ Constructors ------
     public Connection(Socket socket) throws IOException {
@@ -31,11 +32,17 @@ public class Connection {
         return writer;
     }
 
+    // ----- SETTER ------
     public void setInUse(boolean inUse) {
         this.inUse = inUse;
     }
 
     // ------ Methods ------
+
+    /*
+     * EFFECTS: controlla se lo stream reader è pronto per essere letto
+     * RETURN: reader.ready()
+    */
     public boolean isReaderReady() throws IOException {
         return reader.ready();
     }
@@ -56,6 +63,10 @@ public class Connection {
                 '}';
     }
 
+
+    /*
+     * EFFECTS: chiude il socket, il reader e il writer
+    */
     public void close() throws IOException {
         socket.close();
         reader.close();

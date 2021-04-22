@@ -12,7 +12,7 @@ public class Card implements com.github.arci0066.worth.interfaces.CardInterface,
 
     private String cardTitle;
     private String cardDescription;
-    private CARD_STATUS cardStatus;
+    private CARD_STATUS cardStatus; //Descrittore della lista in cui si trova
 
     //implementazione separata per una migliore gestione
     private CardHistory cardHistory;
@@ -49,10 +49,17 @@ public class Card implements com.github.arci0066.worth.interfaces.CardInterface,
 
     //    ----------- Methods ------------
     @Override
+    // TODO: 22/04/21 Posso eliminarlo?
     public ANSWER_CODE changeStatus(CARD_STATUS newCardStatus) {
         return null;
     }
 
+
+    /*
+     * REQUIRES: userNick != null && newCardStatus != null
+     * EFFECTS: cambia lo status della card in base a newCardStatus e aggiorna la history della card.
+     * RETURN: il codice ritorno di cardHistory.add(...)
+    */
     @Override
     public ANSWER_CODE moveAndAdjournHistory(String userNickname, CARD_STATUS newCardStatus) {
 //TODO       Se il nuovo stato non è compatibile ritorno errore (dovrebbe controllarlo il progetto)
@@ -62,6 +69,10 @@ public class Card implements com.github.arci0066.worth.interfaces.CardInterface,
         return cardHistory.add(userNickname, oldCardStatus, newCardStatus);
     }
 
+
+    /*
+     * EFFECTS: Svuota la history della card e la setta a null per aiutare il GC
+    */
     @Override
     public void empty() {
         cardHistory.empty();

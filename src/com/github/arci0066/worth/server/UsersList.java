@@ -22,10 +22,11 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class UsersList {
-    private static UsersList instance;
+    private static UsersList instance; //instanza per rendere la classe singleton
     @Expose
     List<User> usersList;
-    ReadWriteLock lock;
+
+    ReadWriteLock lock; // variabile di mutua esclusione
 
 
 // ------ Constructors ------
@@ -135,9 +136,6 @@ public class UsersList {
         try (BufferedWriter writer = Files.newBufferedWriter(path, Charset.forName("UTF-8"))) {
             for (User user : usersList) {
                 writer.write(user.getNickname() + ServerSettings.usersDataDivider + user.getPassword() + "\n" + ServerSettings.usersDivider);
-                /*writer.write("Name:"+user.getNickname()+"\n");
-                writer.write("Password:"+user.getPassword()+"\n");
-                writer.write("@\n");*/
             }
         } catch (IOException ex) {
             ex.printStackTrace();

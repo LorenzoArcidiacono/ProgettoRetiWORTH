@@ -22,6 +22,7 @@ public class Task extends Thread {
     private ProjectsList projectsList;
     private UsersList registeredUsersList;
 
+    // ------- SERIALIZZAZIONE -----  
     Gson gson;
 
     // ------ Constructors ------
@@ -42,9 +43,10 @@ public class Task extends Thread {
             return;
         }
         if (message == null) { //in caso di errore di lettura ritorna
+            // TODO: 22/04/21 sollevare eccezione? 
             return;
         }
-        System.out.println("Messaggio letto dal Task: " + message);
+        
         ANSWER_CODE answer_code = ANSWER_CODE.OP_OK;
         String string = message.getExtra();
         switch (message.getOperationCode()) {
@@ -121,7 +123,7 @@ public class Task extends Thread {
                 break;
             }
             case CLOSE_CONNECTION: {
-                try {// TODO: 26/01/21 Synchronize connection?
+                try {// TODO: 26/01/21 Synchronize connection? in teoria non è usata da altri
                     connection.close();
                     registeredUsersList.findUser(message.getSenderNickname()).logout(); // TODO: 27/01/21 se l'utente non esiste errore!
                 } catch (IOException e) {
@@ -134,6 +136,7 @@ public class Task extends Thread {
             }
         }
         // se l'operazione richiede una risposta la invia
+        // TODO: 22/04/21 in caso di extra restituisce sempre op_ok... dovrei cambiare e il metodo restituisce il messaggio
         if (message.getOperationCode() != OP_CODE.CLOSE_CONNECTION && message.getOperationCode() != OP_CODE.LOGOUT) {
             message.setAnswer(answer_code, string);
             try {
@@ -442,9 +445,15 @@ public class Task extends Thread {
         return null;
     }
 
+
+    /*
+     * REQUIRES: @params != null
+     * RETURN: l' indirizzo della chat collegata al progetto projectTitle
+    */
     private String getProjectChat(String projectTitle, String senderNickname) {
         if (isNull(projectTitle, senderNickname)) {
             return null;
+            // TODO: 22/04/21 sollevare eccezione?
         }
         if (findUserByNickname(senderNickname) == null) {
             return null;
@@ -458,6 +467,10 @@ public class Task extends Thread {
     }
 
 
+    /*
+     * REQUIRES: @params != null
+     * RETURN: la history della chat collegata al progetto projectTitle
+    */
     private String getChatHistory(String projectTitle, String senderNickname) {
         if (isNull(projectTitle, senderNickname)) {
             return null;
@@ -473,26 +486,6 @@ public class Task extends Thread {
         return null;
     }
 
-    /*
-     * REQUIRES: String != null && user registrato al progetto.
-     * RETURN: La chat del progetto, null in caso di errore.
-     */
-    // TODO: 13/01/21 Restituire la chat
-    public String readChat(String projectTitle, String userNickname) {
-        return null;
-    }
-
-    /*
-     * REQUIRES: String != null && user registrato al progetto.
-     * EFFECTS: Scrive il messaggio nella chat del progetto
-     * RETURN: OP_OK se op. a buon fine
-     * 			|| UNKNOWN_PROJECT se il progetto non è registrato,
-     * 			|| PERMISSION_DENIED se l'utente non è registrato al progetto,
-     * 			|| OP_FAIL in caso di errore.
-     */
-    public ANSWER_CODE sendChatMsg(String projectTitle, String message, String userNickname) {
-        return ANSWER_CODE.OP_FAIL;
-    }
 
     /*
      * REQUIRES: String != null && user registrato al progetto.
@@ -523,6 +516,11 @@ public class Task extends Thread {
 
     /*---------  Private Methods -----------*/
 
+
+    /*
+     * RETURN: true se tutte le stringhe sono diverse da null
+    */
+    // TODO: 22/04/21 sostituire dove serve
     private boolean isNull(String... strings) {
         for (String str : strings) {
             if (str == null) {
@@ -533,10 +531,19 @@ public class Task extends Thread {
         return false;
     }
 
+
+    /*
+     * REQUIRES: userNickname != null
+     * RETURN: se esiste l'utente con nickname == userNickname, null altrimenti
+    */
     private User findUserByNickname(String userNickname) {
         return registeredUsersList.findUser(userNickname);
     }
 
+    /*
+     * REQUIRES: projectTitle != null
+     * RETURN: se esiste il progetto con titolo == projectTitle, null altrimenti
+     */
     private Project findProjectByTitle(String projectTitle) {
         return projectsList.findProject(projectTitle);
     }

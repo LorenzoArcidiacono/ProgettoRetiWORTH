@@ -1,6 +1,6 @@
 package com.github.arci0066.worth.enumeration;
 
-
+// Possibili risposte ricevute dal server
 public enum ANSWER_CODE {
     OP_OK {
         @Override
