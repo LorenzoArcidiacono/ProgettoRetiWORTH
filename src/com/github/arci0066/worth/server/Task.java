@@ -14,11 +14,15 @@ import com.google.gson.Gson;
 import java.io.IOException;
 
 public class Task extends Thread {
+    // ----- COMUNICAZIONE -----
     Message message;
     Connection connection;
-    Gson gson;
+
+    // --- MEMORIA DATI -----
     private ProjectsList projectsList;
     private UsersList registeredUsersList;
+
+    Gson gson;
 
     // ------ Constructors ------
     public Task(Connection connection) {

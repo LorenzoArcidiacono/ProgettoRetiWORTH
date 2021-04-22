@@ -33,31 +33,36 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import static java.lang.Thread.sleep;
 
 public class Client {
-    private static BufferedReader readerIn = null;
-    private static BufferedWriter writerOut = null;
 
+
+    // -------- DATI UTENTE ---------
     private static String password;
     private static String nickname;
-    private static Scanner scanner;    //Per leggere le richieste da tastiera o da file di input
 
+    // ------- CHAT DEI PROGETTI --------
     private static List<ChatAddress> chatAddresses;
     private static List<ChatMessages> chatMessages;
 
-    // ---- Connessione con il Server ----
+    // ---- CONNESSIONE CON IL SERVER ----
     private static Socket clientSocket;
+    private static BufferedReader readerIn = null;
+    private static BufferedWriter writerOut = null;
+
+    // ------- MEMORIA UTENTI -------
     private static List<String> userStatus;
 
-
-    // ----- Operazioni Remote --------
+    // ----- OPERAZIONI REMOTE --------
     private static RemoteRegistrationInterface serverObj;
     private static Remote remote;
-    private static Registry r;
+    private static Registry registry;
     private static ServerRMI serverInterface = null;
     private static NotifyEventInterface callbackObj;
     private static NotifyEventInterface stub = null;
 
+    // ------- UTILITÀ ----------
     private static Gson gson;
     private static File inputFileTest;
+    private static Scanner scanner;    //Per leggere le richieste da tastiera o da file di input
 
     // TODO: 08/02/21 farlo diventare un main e pulire tutto!
     public static void main(String[] args) {
@@ -90,11 +95,11 @@ public class Client {
 
         if (operazione == 1 || operazione == 2) { // Registrazione o Login
             try {  //setto la RMI
-                r = LocateRegistry.getRegistry(ServerSettings.REGISTRY_PORT);
-                remote = r.lookup(ServerSettings.REGISRTY_OP_NAME);
+                registry = LocateRegistry.getRegistry(ServerSettings.REGISTRY_PORT);
+                remote = registry.lookup(ServerSettings.REGISRTY_OP_NAME);
                 serverObj = (RemoteRegistrationInterface) remote;
 // TODO: 09/04/21 dovrei farlo dopo che si è registrato
-                serverInterface = (ServerRMI) r.lookup("SERVER");
+                serverInterface = (ServerRMI) registry.lookup("SERVER");
                 callbackObj = new NotifyEventInterfaceImpl();
                 stub = (NotifyEventInterface) UnicastRemoteObject.exportObject(callbackObj, 0);
                 //serverInterface.registerForCallback(stub);
@@ -125,7 +130,7 @@ public class Client {
             }
             if (!exit && (message != null)) { //se l'op era di login
                 sendMessage(message);
-                ANSWER_CODE answer_code = rispostaServer();
+                ANSWER_CODE answer_code = serverAnswer();
                 if (answer_code != ANSWER_CODE.OP_OK) { //se il login non è andato a buon fine
                     exit = true;
                     System.err.println("Chiusura dovuta a errore di Login.");
@@ -183,7 +188,7 @@ public class Client {
                 if (msg != null) {
                     sendMessage(msg);
                     if (!msg.getOperationCode().equals(OP_CODE.CLOSE_CONNECTION) && !msg.getOperationCode().equals(OP_CODE.LOGOUT))
-                        rispostaServer();
+                        serverAnswer();
                 }
 
             }
@@ -233,7 +238,7 @@ public class Client {
         }
     }
 
-    private static ANSWER_CODE rispostaServer() {
+    private static ANSWER_CODE serverAnswer() {
         String message = "", read = "";
         boolean end = false;
         // TODO: 26/01/21 Capire come gestire questo while
@@ -291,7 +296,7 @@ public class Client {
     }
 
 
-    // -------- METODI PRIVATI ---------
+    // -------- OPERAZIONI MENU ---------
     private static void printWelcomeMenu() {
         System.out.println("Scegli operazione:\n 1. Registra Utente.\n 2. Login Utente.\n 3. Annulla e Esci.");
     }
@@ -322,7 +327,7 @@ public class Client {
                 "\n 17. Esci.");
     }
 
-    //------ POSSIBILI OPERAZIONI ------
+    //------ POSSIBILI OPERAZIONI RICHIESTE ------
 
     // TODO: 27/01/21 cambiare ritorno
     private static boolean register() {
@@ -358,10 +363,12 @@ public class Client {
         return new Message(nickname, null, OP_CODE.LOGOUT, null, null, null);
     }
 
+    // TODO: 20/04/21 rendere questo un metodo locale in base a una struttura locale
     private static Message listUsers() {
         return new Message(nickname, null, OP_CODE.LIST_USER, null, null, null);
     }
 
+    // TODO: 20/04/21 rendere questo un metodo locale in base a una struttura locale
     private static Message listOnlineUsers() {
         return new Message(nickname, null, OP_CODE.LIST_ONLINE_USER, null, null, null);
     }
@@ -456,7 +463,7 @@ public class Client {
 
     private static void sendChatMessage() {
         String projectTitle, message;
-        ANSWER_CODE response;
+        ANSWER_CODE response = ANSWER_CODE.OP_FAIL;
         ChatAddress chatAddress = null;
         byte[] data;
         DatagramPacket dp;
@@ -470,24 +477,14 @@ public class Client {
 
         chatAddress = getProjectChatAddress(projectTitle);
         if (chatAddress == null) { //Caso in cui non abbia i riferimenti del progetto in memoria
-            Message request = new Message(nickname, null, OP_CODE.GET_PRJ_CHAT, projectTitle, null, null);
-            sendMessage(request);
-            response = rispostaServer();  // TODO: 15/04/21 in rispostaServer() devo salvare il chat address
-            if (response == ANSWER_CODE.OP_OK) {
-                //Ricevo la chat fino a questo momento
-                request = new Message(nickname, null, OP_CODE.GET_CHAT_HST, projectTitle, null, null);
-                sendMessage(request);
-                rispostaServer();
-                System.out.println(findProjectChat(projectTitle).getMessages()); //Stampo i messaggi della chat
-                chatAddress = getProjectChatAddress(projectTitle); // TODO: 15/04/21 controllare che sia diverso da null, comunque è brutto
-                if (chatAddress == null) { //caso in cui la richiesta non sia andata a buon fine
-                    System.err.println("@> Messaggio non inviato.\n");
-                    return;
-                }
-            } else return; //Se c'è stato un errore o io non faccio parte dei membri del progetto non invio
+            response = requestProjectChat(projectTitle);
             // TODO: 15/04/21 in realtà in ogni caso ritorna op_ok... dovrei cambiare questa cosa
+            if (response != ANSWER_CODE.OP_OK) {
+                System.err.println("@> " + response + ": messaggio non inviato.");
+                return;
+            }
+            chatAddress = getProjectChatAddress(projectTitle);
         }
-
         data = message.getBytes();
 
         try {
@@ -513,18 +510,17 @@ public class Client {
         //se non sono iscritto alla chat mi iscrivo
         chatAddress = getProjectChatAddress(projectTitle);
         if (chatAddress == null) { //Caso in cui non abbia i riferimenti del progetto in memoria
-            Message request = new Message(nickname, null, OP_CODE.GET_PRJ_CHAT, projectTitle, null, null);
-            sendMessage(request);
-            response = rispostaServer();  // TODO: 15/04/21 in rispostaServer() devo salvare il chat address
-            if (response == ANSWER_CODE.OP_OK) { //se l'iscrizione è andata a buon fine chiedo i messaggi precedenti
-                request = new Message(nickname, null, OP_CODE.GET_CHAT_HST, projectTitle, null, null);
-                sendMessage(request);
-                rispostaServer();
-            }
+            requestProjectChat(projectTitle);
         }
         System.out.println(findProjectChat(projectTitle).getMessages());
     }
 
+    // --------- OPERAZIONI PER LA CHAT ---------
+
+    /*
+     * EFFECTS: avvia un thread daemon che si occupa di ricevere i messaggi dalle chat dei progetti
+     *          e li salva in memoria.
+    */
     private static void daemonChatSniffer() {
         Thread t = new Thread() {
             @Override
@@ -545,8 +541,8 @@ public class Client {
                 while (true) {
                     //synchronized (chatAddresses) {
                         if (chatAddresses.isEmpty()) {
-                            try { // TODO: 19/04/21 questo tiene chataddress occupato
-                                Thread.sleep(100);
+                            try { // TODO: 19/04/21 questo tiene chataddress occupato e fa un po' schifo
+                                Thread.sleep(1000);
                                 continue;
                             } catch (InterruptedException e) {
                                 e.printStackTrace();
@@ -584,6 +580,7 @@ public class Client {
     }
 
     // TODO: 19/04/21 sync chat messagges
+    // TODO: 20/04/21 mettere insieme chatMessages e chatAddresses 
     private static ChatMessages findProjectChat(String projectTitle) {
         for (ChatMessages cm : chatMessages) {
             if (cm.getProjectTitle().equals(projectTitle))
@@ -602,6 +599,22 @@ public class Client {
         return null;
     }
 
+    private static ANSWER_CODE requestProjectChat(String projectTitle) {
+        ANSWER_CODE response;
+        Message request = new Message(nickname, null, OP_CODE.GET_PRJ_CHAT, projectTitle, null, null);
+        sendMessage(request);
+        response = serverAnswer();  // TODO: 15/04/21 in rispostaServer() devo salvare il chat address
+        if (response == ANSWER_CODE.OP_OK) { //se l'iscrizione è andata a buon fine chiedo i messaggi precedenti
+            request = new Message(nickname, null, OP_CODE.GET_CHAT_HST, projectTitle, null, null);
+            sendMessage(request);
+            return serverAnswer();
+        }
+        return response;
+    }
+
+
+    // ------- CHIUSURA ------
+    
     // TODO: 26/01/21 Chiusura in caso di errore
     private static Message closeConnection() {
         return new Message(nickname, null, OP_CODE.CLOSE_CONNECTION, null, null, null);

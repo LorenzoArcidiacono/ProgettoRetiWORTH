@@ -28,9 +28,13 @@ public class ChatMessages {
 
     public String getMessages() {
         String response= "";
+        if(messages.isEmpty())
+            return "- Nessun nuovo messaggio -";
         for (String str: messages) {
             response += str +"\n";
         }
+        //I messaggi già letti non dovranno essere ristampati
+        messages.clear();
         return response;
     }
 

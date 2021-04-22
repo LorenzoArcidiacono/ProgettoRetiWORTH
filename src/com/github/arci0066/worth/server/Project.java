@@ -374,6 +374,7 @@ public class Project implements Serializable {
         boolean done = false;
         byte[] data = new byte[1024];
         DatagramPacket dp = new DatagramPacket(data, data.length);
+        lock.writeLock().lock();
         try {
             ms.setSoTimeout(10);
             while (!done) {
@@ -387,6 +388,9 @@ public class Project implements Serializable {
         }
         catch (IOException e) {
             e.printStackTrace();
+        }
+        finally {
+            lock.writeLock().unlock();
         }
     }
 
