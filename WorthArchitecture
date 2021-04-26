@@ -1,4 +1,4 @@
-<mxfile host="app.diagrams.net" modified="2021-04-26T13:54:15.622Z" agent="5.0 (Macintosh)" etag="5-iT-r2Z6BOuTOhaSJcd" version="14.6.6" type="github">
+<mxfile host="app.diagrams.net" modified="2021-04-26T14:01:43.002Z" agent="5.0 (Macintosh)" etag="XJ0egjifl_ivsx95Zz7Q" version="14.6.6" type="github">
   <diagram name="Page-1" id="5f0bae14-7c28-e335-631c-24af17079c00">
     <mxGraphModel dx="946" dy="1450" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" background="#ffffff" math="0" shadow="0">
       <root>
@@ -103,6 +103,38 @@
         </mxCell>
         <mxCell id="V8GEVcErOA7a-23r_aCz-23" value="File System" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;" vertex="1" parent="1">
           <mxGeometry x="730" y="-20" width="60" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="V8GEVcErOA7a-23r_aCz-30" value="" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="1030" y="50" width="530" height="400" as="geometry" />
+        </mxCell>
+        <mxCell id="V8GEVcErOA7a-23r_aCz-31" value="Client" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="1050" y="60" width="40" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="V8GEVcErOA7a-23r_aCz-35" value="ChatAddresses" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;" vertex="1" parent="1">
+          <mxGeometry x="1060" y="100" width="100" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="V8GEVcErOA7a-23r_aCz-36" value="ChatMessagges" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;" vertex="1" parent="1">
+          <mxGeometry x="1060" y="180" width="100" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="V8GEVcErOA7a-23r_aCz-39" style="edgeStyle=none;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;startArrow=classic;startFill=1;endArrow=oval;endFill=0;endSize=11;" edge="1" parent="1" source="V8GEVcErOA7a-23r_aCz-38">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="760" y="150" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="V8GEVcErOA7a-23r_aCz-38" value="Client Socket" style="whiteSpace=wrap;html=1;aspect=fixed;" vertex="1" parent="1">
+          <mxGeometry x="1030" y="260" width="60" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="V8GEVcErOA7a-23r_aCz-43" style="edgeStyle=none;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0.944;entryY=0.729;entryDx=0;entryDy=0;entryPerimeter=0;startArrow=classic;startFill=1;endArrow=none;endFill=0;endSize=11;" edge="1" parent="1" source="V8GEVcErOA7a-23r_aCz-40" target="V8GEVcErOA7a-23r_aCz-7">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="V8GEVcErOA7a-23r_aCz-40" value="ReaderIn" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;" vertex="1" parent="1">
+          <mxGeometry x="1040" y="380" width="90" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="V8GEVcErOA7a-23r_aCz-42" style="edgeStyle=none;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;startArrow=none;startFill=0;endArrow=classic;endFill=1;endSize=6;" edge="1" parent="1" source="V8GEVcErOA7a-23r_aCz-41" target="V8GEVcErOA7a-23r_aCz-7">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="V8GEVcErOA7a-23r_aCz-41" value="WriterOut" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;" vertex="1" parent="1">
+          <mxGeometry x="1040" y="340" width="90" height="30" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>
