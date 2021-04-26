@@ -70,12 +70,12 @@ public class Message{
     @Override
     public String toString() {
         return "Message{" +
-                "senderNickname='" + senderNickname + '\'' +
-                ", operationCode=" + operationCode +
-                ", projectTitle='" + projectTitle + '\'' +
-                ", cardTitle='" + cardTitle + '\'' +
-                ", answerCode=" + answerCode +
-                ", extra='" + extra + '\'' +
+                "senderNickname = '" + senderNickname + '\'' +
+                ", operationCode = " + operationCode +
+                ", projectTitle = '" + projectTitle + '\'' +
+                ", cardTitle = '" + cardTitle + '\'' +
+                ", answerCode = " + answerCode +
+                ", extra = '" + extra + '\'' +
                 '}';
     }
 

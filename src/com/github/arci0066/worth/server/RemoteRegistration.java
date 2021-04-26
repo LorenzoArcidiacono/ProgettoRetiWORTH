@@ -21,7 +21,6 @@ public class RemoteRegistration extends RemoteServer implements RemoteRegistrati
 
     @Override
     public ANSWER_CODE register(String userNickname, String password) throws RemoteException {
-        System.out.println("REGISTER " + usersList.toString());
         if (userNickname != null && password != null) {
             if (usersList.findUser(userNickname) == null) {
                 User user = new User(userNickname, password,false);

@@ -181,8 +181,8 @@ public class Client {
                         msg = closeConnection();
                     }
                     default -> {
-                        System.out.println("Scelta non valida.");
-                        break;
+                        System.out.println("\n@> Scelta non valida.\n");
+                        continue;
                     }
                 }
 
@@ -197,7 +197,7 @@ public class Client {
             }
             try {
                 //Chiudo tutte le comunicazioni e i buffer, deregistro il client dalle callback
-                System.out.println("Chiudo Socket");
+                System.out.println("Chiudo Socket"); // TODO: 26/04/21 da levare una volta finito il testing
                 scanner.close();
                 clientSocket.close();
                 readerIn.close();
@@ -223,13 +223,13 @@ public class Client {
             readerIn = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
             writerOut = new BufferedWriter(new OutputStreamWriter(clientSocket.getOutputStream()));
         } catch (SocketException e) {
-            System.out.println("Il Server ha chiuso la connessione o avvenuto un errore: " + e);
+            System.out.println("Il Server ha chiuso la connessione o è avvenuto un errore: " + e);
             return false;
         } catch (UnknownHostException e) {
             e.printStackTrace();
             return false;
         } catch (IOException e) {
-            System.out.println("Il Server ha chiuso la connessione o  avvenuto un errore:" + e);
+            System.out.println("Il Server ha chiuso la connessione o  è avvenuto un errore:" + e);
             return false;
         }
         return true;
@@ -267,9 +267,6 @@ public class Client {
             while (!end && (message = readerIn.readLine()) != null) {
                 if (!message.contains(ServerSettings.MESSAGE_TERMINATION_CODE)) {
                     read += message;
-                    //System.out.println("Task leggo " + read);
-                    //System.out.println("Provo a uscire");
-                    //read = read.replace("END","");
                 } else
                     end = true;
             }
@@ -277,21 +274,19 @@ public class Client {
             e.printStackTrace();
         }
         Message answer = gson.fromJson(read, Message.class);
-        //System.out.println("Server answer:" + answer);
+        System.out.println("\n@> " + answer.getAnswerCode() + "\n");
         switch (answer.getOperationCode()) {
             case LOGIN, LOGOUT, CREATE_PROJECT, ADD_CARD, ADD_MEMBER, MOVE_CARD, CANCEL_PROJECT: {
-                System.out.println("\n@> " + answer.getAnswerCode() + "\n");
+                // TODO: 26/04/21 posso eliminare 
                 break;
             }
             case LIST_USER, LIST_ONLINE_USER, LIST_PROJECTS, SHOW_CARD, SHOW_MEMBERS, SHOW_PROJECT_CARDS, GET_CARD_HISTORY: {
-                System.out.println("\n@> " + answer.getAnswerCode() + "\n");
                 if (answer.getAnswerCode().equals(ANSWER_CODE.OP_OK)) {
                     System.out.println("@> " + answer.getExtra() + "\n");
                 }
                 break;
             }
             case GET_PRJ_CHAT: {
-                System.out.println("\n@> chat ricevuta:" + answer.getExtra() + "\n");
                 if (answer.getAnswerCode().equals(ANSWER_CODE.OP_OK)) {
                     if (answer.getExtra().equals("Utente non membro del progetto.")) // TODO: 15/04/21 sarebbe carino metterlo come stringa predefinita
                         System.out.println("@> " + answer.getExtra() + "\n");
@@ -437,7 +432,7 @@ public class Client {
      */
     private static Message createProject() {
         String projectTitle;
-        System.out.print("Inserire il nome del Progetto:");
+        System.out.print("Inserire il Titolo del Progetto:");
         projectTitle = scanner.next();
         return new Message(nickname, null, OP_CODE.CREATE_PROJECT, projectTitle, null, null);
     }
@@ -448,9 +443,9 @@ public class Client {
      */
     private static Message addMember() {
         String projectTitle, user;
-        System.out.print("Inserire il nome del Progetto:");
+        System.out.print("Inserire il Titolo del Progetto:");
         projectTitle = scanner.next();
-        System.out.print("Inserire il nome del utente da aggiungere al progetto:");
+        System.out.print("Inserire il nome dell' utente da aggiungere al progetto:");
         user = scanner.next();
         return new Message(nickname, user, OP_CODE.ADD_MEMBER, projectTitle, null, null);
     }
@@ -461,7 +456,7 @@ public class Client {
      */
     private static Message showMember() {
         String projectTitle;
-        System.out.print("Inserire il nome del Progetto:");
+        System.out.print("Inserire il Titolo del Progetto:");
         projectTitle = scanner.next();
         return new Message(nickname, null, OP_CODE.SHOW_MEMBERS, projectTitle, null, null);
     }
@@ -472,7 +467,7 @@ public class Client {
      */
     private static Message showProjectCards() {
         String projectTitle;
-        System.out.print("Inserire il nome del Progetto:");
+        System.out.print("Inserire il Titolo del Progetto:");
         projectTitle = scanner.next();
         return new Message(nickname, null, OP_CODE.SHOW_PROJECT_CARDS, projectTitle, null, null);
     }
@@ -483,7 +478,7 @@ public class Client {
      */
     private static Message showCard() {
         String projectTitle, card, extra;
-        System.out.print("Inserire il nome del Progetto:");
+        System.out.print("Inserire il Titolo del Progetto:");
         projectTitle = scanner.next();
         System.out.print("Inserire il nome della Card:");
         card = scanner.next();
@@ -498,11 +493,11 @@ public class Client {
      */
     private static Message addCard() {
         String projectTitle, card, desc;
-        System.out.print("Inserire il nome del Progetto:");
+        System.out.print("Inserire il Titolo del Progetto:");
         projectTitle = scanner.next();
         System.out.print("Inserire il nome della Card:");
         card = scanner.next();
-        System.out.print("Inserire Descrizione della Card:");
+        System.out.print("Inserire descrizione della Card:");
         desc = scanner.next();
         return new Message(nickname, desc, OP_CODE.ADD_CARD, projectTitle, card, null);
     }
@@ -513,14 +508,14 @@ public class Client {
      */
     private static Message moveCard() {
         String projectTitle, card, extra;
-        System.out.print("Inserire il nome del Progetto:");
+        System.out.print("Inserire il Titolo del Progetto:");
         projectTitle = scanner.next();
         System.out.print("Inserire il nome della Card:");
         card = scanner.next();
-        System.out.print("Inserire lista di partenza:"); // TODO: 25/01/21 Migliorare scelta lista!
+        System.out.print("Titolo lista di partenza:"); // TODO: 25/01/21 Migliorare scelta lista!
         extra = scanner.next();
         extra += "->";
-        System.out.print("Inserire lista di destinazione:");
+        System.out.print("Titolo lista di destinazione:");
         extra += scanner.next();
         return new Message(nickname, extra, OP_CODE.MOVE_CARD, projectTitle, card, null);
     }
@@ -531,7 +526,7 @@ public class Client {
      */
     private static Message getCardHistory() {
         String projectTitle, card, list;
-        System.out.print("Inserire il nome del Progetto:");
+        System.out.print("Inserire il Titolo del Progetto:");
         projectTitle = scanner.next();
         System.out.print("Inserire il nome della Card:");
         card = scanner.next();
@@ -546,7 +541,7 @@ public class Client {
      */
     private static Message cancelProject() {
         String projectTitle;
-        System.out.print("Inserire il nome del Progetto:");
+        System.out.print("Inserire il Titolo del Progetto:");
         projectTitle = scanner.next();
         return new Message(nickname, null, OP_CODE.CANCEL_PROJECT, projectTitle, null, null);
     }
@@ -563,7 +558,7 @@ public class Client {
         DatagramPacket dp;
         DatagramSocket ds;
 
-        System.out.print("Nome del Progetto: ");
+        System.out.print("Titolo del Progetto: ");
         projectTitle = scanner.next();
         System.out.print("Messaggio: ");
         message = scanner.next();
@@ -602,7 +597,7 @@ public class Client {
         DatagramPacket dp;
         MulticastSocket ms;
 
-        System.out.print("Nome del Progetto: ");
+        System.out.print("Titolo del Progetto: ");
         projectTitle = scanner.next();
 
         //se non sono iscritto alla chat mi iscrivo
@@ -623,7 +618,6 @@ public class Client {
         Thread t = new Thread() {
             @Override
             public void run() {
-                System.out.println("Daemon sniffer running");
                 //per ogni progetto di cui il client fa parte chiede al server il chat address
                 //per ogni progetto di cui fa parte chiede la lista dei messaggi vecchi e la salva
 

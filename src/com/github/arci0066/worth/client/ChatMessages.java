@@ -29,13 +29,13 @@ public class ChatMessages {
 
     /*
      * EFFECTS: restituisce una lista dei messaggi in memoria fino a questo momento,
-     *          una volta restituiti li cancella dalla memoria
+     *          una volta restituiti li cancella dalla memoriaf
      * RETURN:
     */
     public String getMessages() {
         String response= "";
         if(messages.isEmpty())
-            return "- Nessun nuovo messaggio -";
+            return "\n@> - Nessun nuovo messaggio -\n";
         for (String str: messages) {
             response += str +"\n";
         }

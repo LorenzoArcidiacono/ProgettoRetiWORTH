@@ -43,7 +43,7 @@ public class Leader extends Thread {
                     try {
                         //Se la connessione non è chiusa, non è già servita ed ha inviato un messaggio
                         if (!connection.isClosed() && connection.isReaderReady() && !connection.isInUse()) {
-                            System.out.println("Leader serving: " + connection.getSocket());
+                            System.out.println("Richiesta di un client @: " + connection.getSocket());
                             // setto la connessione come servita per evitare di avviare più task
                             connection.setInUse(true);
                             // passo al pool un nuovo task per questa connessione

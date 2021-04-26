@@ -25,7 +25,7 @@ public class CardHistory implements Serializable {
         dtf = DateTimeFormatter.ofPattern("HH:mm:ss dd/MM/yyyy");
         events = new ArrayList<>();
 //        TODO aggiungere stampa del tempo
-        events.add(nickname + " created this card @ "+dtf.format(LocalDateTime.now()));
+        events.add("Creata da @"+nickname + " @ "+dtf.format(LocalDateTime.now()));
     }
 
 //    ------ Metodi -------
@@ -41,15 +41,13 @@ public class CardHistory implements Serializable {
         if(dtf == null){
             dtf = DateTimeFormatter.ofPattern("HH:mm:ss dd/MM/yyyy");
         }
-        events.add(userNickname +": " +cardStatus+ " -> " + newCardStatus+ " @"+ dtf.format(LocalDateTime.now()));
+        events.add("@"+userNickname +": " +cardStatus+ " -> " + newCardStatus+ " @"+ dtf.format(LocalDateTime.now()));
         return ANSWER_CODE.OP_OK;
     }
 
     @Override
     public String toString() {
-        return "CardHistory{" +
-                events +
-                '}';
+        return "Eventi: " + events;
     }
 
 

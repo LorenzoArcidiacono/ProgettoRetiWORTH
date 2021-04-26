@@ -202,7 +202,7 @@ public class Project implements Serializable {
             } else // In caso non sia riuscita a rimuoverla dalla lista.
                 answer = ANSWER_CODE.OP_FAIL;
         } catch (NullPointerException e) {
-            System.err.println("Errore in remove frome list: " + e);
+            System.err.println("Errore in remove from list: " + e);
         } finally {
             lock.writeLock().unlock();
         }
@@ -371,7 +371,6 @@ public class Project implements Serializable {
             while (!done) {
                 ms.receive(dp);
                 String s = new String(dp.getData(), 0, dp.getLength());
-                System.out.println(s);
                 chatMsgs.add(s);
             }
         }
@@ -419,7 +418,6 @@ public class Project implements Serializable {
      * RETURN: il CARD_STATUS corretto
      */
     private CARD_STATUS getStatus(String cardStatus) {
-        System.err.println(cardStatus);
         cardStatus = cardStatus.toUpperCase();
         return switch (cardStatus) {
             case "TODO" -> CARD_STATUS.TODO;

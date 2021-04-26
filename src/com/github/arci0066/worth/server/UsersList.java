@@ -112,7 +112,6 @@ public class UsersList {
         lock.readLock().lock();
         try {
             for (User usr : usersList) {
-                System.out.println("Trovato " + usr);
                 if (usr.getNickname().equals(userNickname))
                     user = usr;
             }
@@ -153,7 +152,6 @@ public class UsersList {
     }
 
     public String jsonString() {
-        System.err.println("UserList Sono in JsonString start");
         Gson gson = new GsonBuilder()
                 .excludeFieldsWithoutExposeAnnotation()
                 .create();
@@ -161,8 +159,6 @@ public class UsersList {
         for (User u: usersList) {
             usersStatus.add(u.getNickname()+" : "+u.getUserStatus());
         }
-        System.out.println( "UserList"+gson.toJson(usersStatus) );
-        System.err.println("UserList Sono in JsonString end");
         return gson.toJson(usersStatus);
     }
 }

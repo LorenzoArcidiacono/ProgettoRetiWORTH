@@ -55,7 +55,6 @@ public class Server {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        System.out.println(path);
 
         //Se presenti legge i file di backup
         readServerBackup(path);
@@ -68,7 +67,7 @@ public class Server {
         try {
             serverSocket = new ServerSocket();
             serverSocket.bind(new InetSocketAddress(InetAddress.getLocalHost(),ServerSettings.SERVER_PORT));
-            System.out.println("Server: Aperta connessione: " + InetAddress.getLocalHost() + "," + ServerSettings.SERVER_PORT);
+            System.out.println("Aperta la connessione @ " + InetAddress.getLocalHost() + ":" + ServerSettings.SERVER_PORT);
         } catch (UnknownHostException e) { // TODO: 24/01/21 sistemare return
             e.printStackTrace();
             return;
@@ -117,12 +116,10 @@ public class Server {
             Socket client;
             try {
                 client = serverSocket.accept();
-                System.out.println("\nServer: new client @ " + client.getRemoteSocketAddress());
+                System.out.println("\nNuovo client @ " + client.getRemoteSocketAddress());
                 synchronized (socketList) { //aggiunge la connessione all' elenco
                     socketList.add(client);
                 }
-                System.out.println(socketList);
-
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -145,7 +142,7 @@ public class Server {
              ObjectInputStream in = new ObjectInputStream(fis)) {
             registeredUsersList = (List<User>) in.readObject();
             usersList = UsersList.getSingletonInstance(registeredUsersList); //setto la lista utenti a partire dal backup
-            System.out.println("Backup utenti trovati:" + usersList.getUsersNickname());
+            System.out.println("Backup utenti trovato:" + usersList.getUsersNickname());
         } catch (FileNotFoundException e) {
             System.err.println("Nessun file di backup utenti trovato.");
         } catch (IOException | ClassNotFoundException ex) {
@@ -158,7 +155,7 @@ public class Server {
              ObjectInputStream in = new ObjectInputStream(fis)) {
             oldProjectsList = (List<Project>) in.readObject();
             projectsList = ProjectsList.getSingletonInstance(oldProjectsList); //setto la lista progetti a partire dal backup
-            System.out.println("Backup progetti trovati:" + projectsList.getProjectsTitle());
+            System.out.println("Backup progetti trovato:" + projectsList.getProjectsTitle());
         } catch (FileNotFoundException e) {
             System.err.println("Nessun file di backup Progetti trovato.");
         } catch (IOException | ClassNotFoundException ex) {

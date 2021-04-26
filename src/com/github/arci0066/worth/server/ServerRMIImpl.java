@@ -24,13 +24,13 @@ public class ServerRMIImpl extends RemoteServer implements ServerRMI {
     public synchronized void registerForCallback (NotifyEventInterface clientInterface) throws RemoteException {
         if (!clients.contains(clientInterface)) {
             clients.add(clientInterface);
-            System.out.println("New client registered for User List Callback.");
+            System.out.println("Nuovo client registrato per la callback.");
 
             // TODO: 12/04/21 capire se va bene così, funziona
             String registeredUserList;
             synchronized (usersList) { //TODO capire se serve sincronizzare
                 registeredUserList = usersList.jsonString(); // TODO: 09/04/21 Meglio così o json?
-                System.err.println("ServerRMIImpl "+registeredUserList+"in teoria "+usersList.jsonString());
+                System.err.println("ServerRMIImpl "+registeredUserList+"\n In teoria "+usersList.jsonString());// TODO: 26/04/21 cancellare
             }
             update(registeredUserList);
         }
@@ -40,9 +40,9 @@ public class ServerRMIImpl extends RemoteServer implements ServerRMI {
         @Override
         public void unregisterForCallback (NotifyEventInterface client) throws RemoteException {
             if (clients.remove(client))
-                System.out.println("Client unregistered for callback");
+                System.out.println("Client deregistrato dalla callback");
             else
-                System.out.println("Unable to unregister client");
+                System.err.println("Unable to unregister client");
         }
 
 
@@ -55,12 +55,10 @@ registrati */
 
     private synchronized void doCallbacks(String value) throws
             RemoteException {
-        System.out.println("Starting callbacks.");
         //int numeroClienti = clients.size( );
         for (NotifyEventInterface client : clients) {
             client.notifyEvent(value);
         }
-        System.out.println("Callbacks complete.");
     }
 // ------ Constructors ------
 

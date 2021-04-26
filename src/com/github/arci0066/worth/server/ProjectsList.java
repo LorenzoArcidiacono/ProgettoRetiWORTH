@@ -119,7 +119,7 @@ public class ProjectsList  {
         String suffix = (++lastUsedIP).toString();
         String address = multicastIpPrefix + suffix;
 
-        System.out.println("Indirizzo chat:"+address+":"+(lastUsedPort-1));
+        System.out.println("Indirizzo chat del progetto"+projectTitle+":"+address+":"+(lastUsedPort-1));
         lock.writeLock().lock();
         try {
             projectsList.add(new Project(projectTitle,userNickname,address,--lastUsedPort));

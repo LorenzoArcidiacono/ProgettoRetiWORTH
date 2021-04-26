@@ -35,7 +35,6 @@ public class Task extends Thread {
 
     @Override
     public void run() {
-        System.out.println("Run avviato.");
         try {
             readMessage();
         } catch (IOException e) {
@@ -46,7 +45,7 @@ public class Task extends Thread {
             // TODO: 22/04/21 sollevare eccezione? 
             return;
         }
-        
+        System.out.println("Messaggio ricevuto: "+ message);
         ANSWER_CODE answer_code = ANSWER_CODE.OP_OK;
         String string = message.getExtra();
         switch (message.getOperationCode()) {
@@ -144,7 +143,6 @@ public class Task extends Thread {
             } catch (IOException e) {
                 e.printStackTrace();
             }
-            System.out.println(message.toString());
         }
         //setta la connessione per una nuova op
         connection.setInUse(false);
@@ -171,15 +169,13 @@ public class Task extends Thread {
        while (!end && (connectionMessage = connection.getReader().readLine())!=null) { // TODO: 25/01/21 Capire se manda più messaggi che fare
             if(!connectionMessage.contains(ServerSettings.MESSAGE_TERMINATION_CODE)){
                 read += connectionMessage;
-                System.out.println("Task leggo " + read);
-                System.out.println("Provo a uscire");
+
                 //read = read.replace("END","");
             }
             else
                 end = true;
             //break;
         }
-        System.out.println("Task uscito");
         message = gson.fromJson(read, Message.class);
     }
 
@@ -195,7 +191,6 @@ public class Task extends Thread {
      *			|| OP_FAIL in caso di errore
      */
     public ANSWER_CODE login(String userNickname, String userPassword) {
-        System.out.println("Task: sono in login");
         if (isNull(userNickname, userPassword)) {
             return ANSWER_CODE.OP_FAIL;
         }
@@ -417,7 +412,6 @@ public class Task extends Thread {
         if (findUserByNickname(userNickname) == null)
             return ANSWER_CODE.UNKNOWN_USER;
         String[] status = extra.split("->");  //Extra è una stringa tipo INPROGRESS->TOBEREVISED
-        System.err.println(status[0] + " " + status[1]);
         Project prj = findProjectByTitle(projectTitle);
         if (prj != null)
             return prj.moveCard(cardTitle, status[0], status[1], userNickname);
