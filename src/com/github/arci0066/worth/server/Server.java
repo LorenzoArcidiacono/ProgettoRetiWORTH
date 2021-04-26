@@ -1,10 +1,10 @@
 /*
-*
-* @Author Lorenzo Arcidiacono
-* @Mail l.arcidiacono1@studenti.unipi.it
-* @Matricola 534235
-*
-*/
+ *
+ * @Author Lorenzo Arcidiacono
+ * @Mail l.arcidiacono1@studenti.unipi.it
+ * @Matricola 534235
+ *
+ */
 package com.github.arci0066.worth.server;
 
 import com.github.arci0066.worth.enumeration.ANSWER_CODE;
@@ -33,48 +33,41 @@ public class Server {
 
     //---------- MAIN ---------
     public static void main(String[] args) {
-        ProjectsList projectsList;
-        UsersList registeredUsersList;
-        SocketList socketList;
-        ThreadPoolExecutor pool;
-        Thread leader;
+        SocketList socketList; //Lista dei descrittori delle connessioni dei client
+        ThreadPoolExecutor pool; //pool di thread per gestire le richieste dei client
+        Thread leader; //Thread per la gestione delle connessioni pronte a scrivere
 
-        boolean exit = false;
+        boolean exit = false; //Stabilisce se devo uscire dal ciclo principale
 
         //Oggetti per la connessione
         final ServerSocket serverSocket;
         RemoteRegistration rmi;
 
-        Gson gson = new GsonBuilder()
-                .excludeFieldsWithoutExposeAnnotation()
-                .create();
 
         //Inizializza gli oggetti
         socketList = SocketList.getSingletonInstance();
         pool = new ThreadPoolExecutor(ServerSettings.MIN_THREAD_NUMBER, ServerSettings.MAX_THREAD_NUMBER, ServerSettings.THREAD_KEEP_ALIVE_TIME, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>());
 
-        //Creo la directory in cui salvo i progetti e, se esistono, leggo i file di backup 
+        //Crea la directory in cui salvo i progetti e, se esistono, leggo i file di backup
         Path path = Paths.get(serverBackupDirPath);
         try {
             Files.createDirectories(path);
         } catch (IOException e) {
             e.printStackTrace();
         }
-        System.out.println(path);
 
-        //Se presenti leggo i file di backup
+        //Se presenti legge i file di backup
         readServerBackup(path);
 
-        //Lancio il thread Leader
+        //Lancia il thread Leader
         leader = new Leader(pool);
         leader.start();
-        
+
         //Apre la connessione
         try {
             serverSocket = new ServerSocket();
-            serverSocket.bind(new InetSocketAddress(InetAddress.getLocalHost(),
-                    ServerSettings.SERVER_PORT));
-            System.out.println("Server: Aperta connessione: " + InetAddress.getLocalHost() + "," + ServerSettings.SERVER_PORT);
+            serverSocket.bind(new InetSocketAddress(InetAddress.getLocalHost(),ServerSettings.SERVER_PORT));
+            System.out.println("Aperta la connessione @ " + InetAddress.getLocalHost() + ":" + ServerSettings.SERVER_PORT);
         } catch (UnknownHostException e) { // TODO: 24/01/21 sistemare return
             e.printStackTrace();
             return;
@@ -82,7 +75,8 @@ public class Server {
             e.printStackTrace();
             return;
         }
-//        Setto la RMI per la registrazione
+
+//        Setta la RMI per la registrazione dei client
         ServerRMIImpl server = null;
         try {
             server = new ServerRMIImpl();
@@ -104,9 +98,10 @@ public class Server {
         Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
             public void run() {
                 System.out.println("In Shutdown Hook");
-                // TODO: 22/01/21 salvare tutto in memoria (forse dovrei farlo più spesso in Leader) chiudere connessioni
+                // TODO: 22/01/21 salvare tutto in memoria
                 pool.shutdown();
                 try {
+                    // TODO: 22/04/21 vedere se c'è altro da chiudere 
                     serverSocket.close();
                 } catch (IOException e) {
                     e.printStackTrace();
@@ -117,19 +112,14 @@ public class Server {
 
         //Ciclo principale
         while (!exit) { // TODO: 09/04/21 implementare qualcosa che riconosca il messaggio di stop
-            System.out.println("\nWaiting for clients");
             //Aspetta una connessione
-            System.out.println("2 " + socketList);
             Socket client;
             try {
                 client = serverSocket.accept();
-                System.out.println("\nServer: new client:" + client.getRemoteSocketAddress());
-                //server.update(gson.toJson(registeredUsersList)); // TODO: 27/01/21 andrebbe messo al momento della registrazione
-                synchronized (socketList) { //aggiungo la connessione all' elenco
+                System.out.println("\nNuovo client @ " + client.getRemoteSocketAddress());
+                synchronized (socketList) { //aggiunge la connessione all' elenco
                     socketList.add(client);
                 }
-                System.out.println(socketList);
-
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -139,7 +129,7 @@ public class Server {
 
     /*
      * EFFECTS: Legge i file di backup sul disco e inizializza la lista degli utenti e dei progetti
-    */
+     */
     private static void readServerBackup(Path path) { // TODO: 09/04/21 posso eliminare path
         List<User> registeredUsersList = null;
         UsersList usersList = null;
@@ -148,53 +138,28 @@ public class Server {
         ProjectsList projectsList = null;
 
         //Leggo il backup della lista utenti registrati
-        try(FileInputStream fis = new FileInputStream(usersBackupFile);
-            ObjectInputStream in = new ObjectInputStream(fis)) {
+        try (FileInputStream fis = new FileInputStream(usersBackupFile);
+             ObjectInputStream in = new ObjectInputStream(fis)) {
             registeredUsersList = (List<User>) in.readObject();
             usersList = UsersList.getSingletonInstance(registeredUsersList); //setto la lista utenti a partire dal backup
-            System.out.println("Backup utenti:"+usersList.getUsersNickname());
-        }
-        catch (FileNotFoundException e){
-            System.err.println("Nessun file di backup Utenti trovato.");
-        }
-        catch(IOException ex) {
-            ex.printStackTrace();
-        }
-        catch(ClassNotFoundException ex) {
+            System.out.println("Backup utenti trovato:" + usersList.getUsersNickname());
+        } catch (FileNotFoundException e) {
+            System.err.println("Nessun file di backup utenti trovato.");
+        } catch (IOException | ClassNotFoundException ex) {
             ex.printStackTrace();
         }
 
 
         //Leggo il backup dei progetti
-        try(FileInputStream fis = new FileInputStream(projectsBackupFile);
-            ObjectInputStream in = new ObjectInputStream(fis)) {
+        try (FileInputStream fis = new FileInputStream(projectsBackupFile);
+             ObjectInputStream in = new ObjectInputStream(fis)) {
             oldProjectsList = (List<Project>) in.readObject();
             projectsList = ProjectsList.getSingletonInstance(oldProjectsList); //setto la lista progetti a partire dal backup
-            System.out.println("Backup progetti:"+ projectsList.getProjectsTitle());
-        }
-        catch (FileNotFoundException e){
+            System.out.println("Backup progetti trovato:" + projectsList.getProjectsTitle());
+        } catch (FileNotFoundException e) {
             System.err.println("Nessun file di backup Progetti trovato.");
-        }
-        catch(IOException ex) {
+        } catch (IOException | ClassNotFoundException ex) {
             ex.printStackTrace();
         }
-        catch(ClassNotFoundException ex) {
-            ex.printStackTrace();
-        }
-    }
-
-    // TODO: 04/03/21 string ha una dimensione massima, cambiare con String[]? per file lunghi 
-    private static String readFile(String filePath) {
-        Path path = Paths.get(filePath);
-        String str = "";
-        String line = "";
-        try (BufferedReader reader = Files.newBufferedReader(path)){
-            while ((line = reader.readLine()) != null)
-                str += line;
-        } catch (IOException e) {
-            System.err.println("File " + filePath + " non esiste.");
-            return null;
-        }
-        return str;
     }
 }

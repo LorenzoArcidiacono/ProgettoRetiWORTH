@@ -7,6 +7,7 @@
 */
 package com.github.arci0066.worth.enumeration;
 
+// Status di una card
 public enum CARD_STATUS {
     TODO,
     INPROGRESS,

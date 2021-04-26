@@ -20,9 +20,9 @@ import static com.github.arci0066.worth.server.ServerSettings.serverBackupDirPat
 
 /*CLASSE SINGLETON && THREAD SAFE*/
 public class ProjectsList  {
-    private static ProjectsList instance;
+    private static ProjectsList instance; //instanza della projectsList per il costruttore singleton
     private List<Project> projectsList;
-    ReadWriteLock lock;
+    ReadWriteLock lock; //variabili di mutua esclusione
 
     private static String multicastIpPrefix = "239.0.0."; //prefisso per l'ip multicast, non cambia
     private Integer lastUsedIP; //suffisso per l' indirizzo ip multicast
@@ -119,7 +119,7 @@ public class ProjectsList  {
         String suffix = (++lastUsedIP).toString();
         String address = multicastIpPrefix + suffix;
 
-        System.out.println("Indirizzo chat:"+address+":"+(lastUsedPort-1));
+        System.out.println("Indirizzo chat del progetto"+projectTitle+":"+address+":"+(lastUsedPort-1));
         lock.writeLock().lock();
         try {
             projectsList.add(new Project(projectTitle,userNickname,address,--lastUsedPort));
@@ -149,6 +149,7 @@ public class ProjectsList  {
      * RETURN: project tale che project.getProjectTitle == projectTitle, null altrimenti
      */
     public Project findProject(String projectTitle) {
+        // TODO: 22/04/21 controllare null
         Project project = null;
 
         lock.readLock().lock();
@@ -191,9 +192,8 @@ public class ProjectsList  {
                 // per ogni progetto crea una cartella e salva le card nella cartella
                 Path path = Paths.get(serverBackupDirPath + "/" + prj.getProjectTitle());
                 Files.createDirectories(path);
+                //salva le card del progetto
                 prj.saveCard(path);
-                //Path userListPath = Paths.get(path + projectUsersBackupFile);
-                //prj.saveUsersList(userListPath);
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -201,6 +201,5 @@ public class ProjectsList  {
             lock.readLock().unlock();
         }
     }
-
 }
 

@@ -24,21 +24,22 @@ public class Project implements Serializable {
     @Serial
     private static final long serialVersionUID = 1;
 
+    // TODO: 22/04/21 fa schifo
     private static final String UTENTE_ERRATO = "Utente non membro del progetto.";
 
     private String projectTitle;
     private List<Card> todoList, inProgressList, toBeRevisedList, doneList;
-    private List<String> projectUsers;
-    transient private ReadWriteLock lock;
+    private List<String> projectUsers; //Lista dei membri del progetto
+    
+    transient private ReadWriteLock lock; //lock per la mutua esclusione
 
-    //Come la implemento?
     //--------- CHAT ----------
     transient private MulticastSocket ms;
     transient private InetAddress ia;
     transient private int port;
     transient private String address;
 
-    transient private List<String> chatMsgs;
+    transient private List<String> chatMsgs; //Lista dei messaggi inviati sulla chat
 
 
     // ------ Constructors ------
@@ -201,7 +202,7 @@ public class Project implements Serializable {
             } else // In caso non sia riuscita a rimuoverla dalla lista.
                 answer = ANSWER_CODE.OP_FAIL;
         } catch (NullPointerException e) {
-            System.err.println("Errore in remove frome list: " + e);
+            System.err.println("Errore in remove from list: " + e);
         } finally {
             lock.writeLock().unlock();
         }
@@ -302,22 +303,6 @@ public class Project implements Serializable {
         return response;
     }
 
-    /*
-     * EFFECTS: Crea una stringa con il titolo di ogni card in ogni lista e gli utenti del progetto.
-     * RETURN: La stringa creata.
-     */
-    // TODO: 14/01/21 se non registrato non dovrebbe vedere la lista degli utenti
-    public String prettyPrint(String userNickname) {
-        String str;
-        lock.readLock().lock();
-        try {
-            str = showCards(userNickname) +
-                    ",\n Utenti Registrati: " + projectUsers;
-        } finally {
-            lock.readLock().unlock();
-        }
-        return str;
-    }
 
 //    ------- Private Methods --------
 
@@ -370,20 +355,26 @@ public class Project implements Serializable {
         return answer;
     }
 
+
+    /*
+     * EFFECTS: legge tutti i messaggi inviati sulla chat del progetto dall'ultima invocazione di questo metodo
+     *          e li salva in memoria
+    */
     private void reciveAllMessagge() {
         boolean done = false;
         byte[] data = new byte[1024];
         DatagramPacket dp = new DatagramPacket(data, data.length);
+
         lock.writeLock().lock();
         try {
-            ms.setSoTimeout(10);
+            ms.setSoTimeout(10); // TODO: 22/04/21 usare una variabile
             while (!done) {
                 ms.receive(dp);
                 String s = new String(dp.getData(), 0, dp.getLength());
-                System.out.println(s);
                 chatMsgs.add(s);
             }
-        } catch (SocketTimeoutException e){
+        }
+        catch (SocketTimeoutException e){ //Non ci sono altri messaggi in coda quindi posso uscire.
             done = true;
         }
         catch (IOException e) {
@@ -427,7 +418,6 @@ public class Project implements Serializable {
      * RETURN: il CARD_STATUS corretto
      */
     private CARD_STATUS getStatus(String cardStatus) {
-        System.err.println(cardStatus);
         cardStatus = cardStatus.toUpperCase();
         return switch (cardStatus) {
             case "TODO" -> CARD_STATUS.TODO;
@@ -440,7 +430,14 @@ public class Project implements Serializable {
 
 
     // ---------- Closing && Backup methods -----------------
+
+
+    /*
+     * REQUIRES: cardList != null
+     * EFFECTS: libera lo spazio di memoria delle singole card della lista e della lista stessa
+    */
     private void emptyList(List<Card> cardList) {
+        // TODO: 22/04/21 controllare null
         lock.writeLock().lock();
         try {
             for (Card card : cardList) {
@@ -452,7 +449,13 @@ public class Project implements Serializable {
         }
     }
 
+
+    /*
+     * REQUIRES: path != null
+     * EFFECTS: chiede di fare il backup di tutte le liste di card
+    */
     public void saveCard(Path path) {
+        // TODO: 22/04/21 controllare null
         lock.readLock().lock();
         try {
             for (Card crd : todoList) {
@@ -472,7 +475,13 @@ public class Project implements Serializable {
         }
     }
 
+
+    /*
+     * REQUIRES: @params != null
+     * EFFECTS: scrive le informazioni della card sul file indicato da path
+    */
     private void backupCard(Path path, Card crd) {
+        // TODO: 22/04/21 controllare null
         Path cardPath;
         cardPath = Paths.get(path + "/" + crd.getCardTitle() + ".txt");
         try (BufferedWriter writer = Files.newBufferedWriter(cardPath, StandardCharsets.UTF_8)) {
@@ -484,19 +493,13 @@ public class Project implements Serializable {
         }
     }
 
-    // TODO: 12/04/21 eliminare
-    public void saveUsersList(Path userListPath) {
-        Gson gson = new Gson();
-        try {
-            BufferedWriter writer = Files.newBufferedWriter(userListPath, Charset.forName("UTF-8"));
-            writer.write(gson.toJson(projectUsers));
-            writer.flush();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
 
+    /*
+     * REQUIRES: @params != null
+     * EFFECTS: inizializza gli oggetti dopo che è stato creato un progetto a partire da un backup.
+    */
     public void resetAfterBackup(String address, int port) {
+        // TODO: 22/04/21 controllare null
         try {
             this.port = port;
             this.address = address;

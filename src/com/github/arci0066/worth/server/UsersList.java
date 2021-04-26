@@ -22,10 +22,11 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class UsersList {
-    private static UsersList instance;
+    private static UsersList instance; //instanza per rendere la classe singleton
     @Expose
     List<User> usersList;
-    ReadWriteLock lock;
+
+    ReadWriteLock lock; // variabile di mutua esclusione
 
 
 // ------ Constructors ------
@@ -111,7 +112,6 @@ public class UsersList {
         lock.readLock().lock();
         try {
             for (User usr : usersList) {
-                System.out.println("Trovato " + usr);
                 if (usr.getNickname().equals(userNickname))
                     user = usr;
             }
@@ -135,9 +135,6 @@ public class UsersList {
         try (BufferedWriter writer = Files.newBufferedWriter(path, Charset.forName("UTF-8"))) {
             for (User user : usersList) {
                 writer.write(user.getNickname() + ServerSettings.usersDataDivider + user.getPassword() + "\n" + ServerSettings.usersDivider);
-                /*writer.write("Name:"+user.getNickname()+"\n");
-                writer.write("Password:"+user.getPassword()+"\n");
-                writer.write("@\n");*/
             }
         } catch (IOException ex) {
             ex.printStackTrace();
@@ -155,7 +152,6 @@ public class UsersList {
     }
 
     public String jsonString() {
-        System.err.println("UserList Sono in JsonString start");
         Gson gson = new GsonBuilder()
                 .excludeFieldsWithoutExposeAnnotation()
                 .create();
@@ -163,8 +159,6 @@ public class UsersList {
         for (User u: usersList) {
             usersStatus.add(u.getNickname()+" : "+u.getUserStatus());
         }
-        System.out.println( "UserList"+gson.toJson(usersStatus) );
-        System.err.println("UserList Sono in JsonString end");
         return gson.toJson(usersStatus);
     }
 }

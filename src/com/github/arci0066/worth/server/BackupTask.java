@@ -18,7 +18,7 @@ public class BackupTask extends Thread {
 
     @Override
     public void run() {
-        System.err.println("Salvo tutto!");
+        System.out.println("Backup in memoria.");
 //        Serializzazioni
         usersList.serialize();
         projectsList.serialize();

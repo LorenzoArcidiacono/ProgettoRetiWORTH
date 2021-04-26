@@ -17,7 +17,7 @@ public class CardHistory implements Serializable {
     @Serial
     private static final long serialVersionUID = 1;
 
-    List<String> events;
+    List<String> events; //Lista degli eventi della card
     transient DateTimeFormatter dtf = null;
 
     //    ------ Costruttore --------
@@ -25,34 +25,38 @@ public class CardHistory implements Serializable {
         dtf = DateTimeFormatter.ofPattern("HH:mm:ss dd/MM/yyyy");
         events = new ArrayList<>();
 //        TODO aggiungere stampa del tempo
-        events.add(nickname + " created this card @ "+dtf.format(LocalDateTime.now()));
+        events.add("Creata da @"+nickname + " @ "+dtf.format(LocalDateTime.now()));
     }
 
 //    ------ Metodi -------
+    
+    
+    /*
+     * REQUIRES: @params != null
+     * EFFECTS: aggiunge lo spostamento della card da cardStatus a newCardStatus alla lista degli eventi
+     * RETURN: OP_OK se è andata a buon fine, OP_FAIL in caso di errore
+    */
+    // TODO: 22/04/21 aggiungere OP_FAIL in caso di errore
     public ANSWER_CODE add(String userNickname, CARD_STATUS cardStatus, CARD_STATUS newCardStatus) {
         if(dtf == null){
             dtf = DateTimeFormatter.ofPattern("HH:mm:ss dd/MM/yyyy");
         }
-        events.add(userNickname +": " +cardStatus+ " -> " + newCardStatus+ " @"+ dtf.format(LocalDateTime.now()));
+        events.add("@"+userNickname +": " +cardStatus+ " -> " + newCardStatus+ " @"+ dtf.format(LocalDateTime.now()));
         return ANSWER_CODE.OP_OK;
     }
 
     @Override
     public String toString() {
-        return "CardHistory{" +
-                events +
-                '}';
+        return "Eventi: " + events;
     }
 
+
+    /*
+     * EFFECTS: svuota la lista degli eventi e la setta a null per aiutare il GC
+    */
     public void empty() {
         events.clear();
         events = null;
         dtf = null;
     }
 }
-
-/*
- * Salvare momento della modifica e nickname es. Pippo: TO_DO -> IN_PROGRESS @11/01/2020 13:45
- *
- *
- * */

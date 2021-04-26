@@ -20,18 +20,10 @@ public class User implements Serializable {
     private String encPwd; //password criptata per poter essere salvata in memoria
     @Expose
     private transient USER_STATUS userStatus;
-    private transient ReadWriteLock lock;
+    private transient ReadWriteLock lock; //Variabile di mutua esclusione
     //TODO descrittore della connessione
 
 // ------ Constructors ------
-
-    /*public User(String nickname, String password) {
-        this.nickname = nickname;
-        this.password = password;
-        encPwd = encryptPassword();
-        userStatus = USER_STATUS.OFFLINE;
-        lock = new ReentrantReadWriteLock();
-    }*/
 
     public User(String nickname, String password, boolean encrypted) {
         this.nickname = nickname;
@@ -72,7 +64,14 @@ public class User implements Serializable {
     }
 
     public USER_STATUS getUserStatus() {
-        return userStatus;
+        USER_STATUS status;
+        lock.readLock().lock();
+        try {
+            status = userStatus;
+        } finally {
+            lock.readLock().unlock();
+        }
+        return status;
     }
 
     // ------ Setters -------
@@ -96,6 +95,12 @@ public class User implements Serializable {
     }
 
     // ------ Methods ------
+
+    /*
+     * REQUIRES: @params != null
+     * EFFECTS: controlla che il nickname e la password corrispondano
+     * RETURN: true se corrispondono, false altrimenti
+    */
     public boolean checkCredential(String nickname, String password) {
         boolean answer;
         lock.readLock().lock();
@@ -107,6 +112,10 @@ public class User implements Serializable {
         return answer;
     }
 
+
+    /*
+     * RETURN: true se l'utente è online, false altrimenti
+    */
     public boolean isOnline() {
         boolean answer;
         lock.readLock().lock();
@@ -118,11 +127,18 @@ public class User implements Serializable {
         return answer;
     }
 
+
+    /*
+     * RETURN: la password criptata
+    */
     private String encryptPassword() {
         encPwd = Base64.getEncoder().encodeToString(password.getBytes(StandardCharsets.UTF_8));
         return encPwd;
     }
 
+    /*
+     * RETURN: la password originale
+     */
     private String decryptPassword() {
         return new String( Base64.getDecoder().decode(encPwd));
     }
@@ -141,7 +157,9 @@ public class User implements Serializable {
         return str;
     }
 
-
+    /*
+     * EFFECTS: inizializza gli oggetti dopo che è stato creato un progetto a partire da un backup.
+     */
     public void resetAfterBackup() {
         password = decryptPassword(); //restituisce la password reale
         userStatus = USER_STATUS.OFFLINE; //setto tutti gli utenti offline
