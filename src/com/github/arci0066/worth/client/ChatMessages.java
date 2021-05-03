@@ -9,13 +9,12 @@ public class ChatMessages {
 
     private String projectTitle;
     private List<String> messages;
-    private Gson gson;
 
 // ------ Constructors ------
 
     public ChatMessages(String projectTitle, String messages) {
         this.projectTitle = projectTitle;
-        gson = new Gson();
+        Gson gson = new Gson();
         this.messages = gson.fromJson(messages, new TypeToken<List<String>>() {
         }.getType());
     }

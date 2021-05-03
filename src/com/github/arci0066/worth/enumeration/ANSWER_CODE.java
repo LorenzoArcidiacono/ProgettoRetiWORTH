@@ -56,7 +56,11 @@ public enum ANSWER_CODE {
             return "Permesso negato.";
         }
     },
-    PROJECT_NOT_FINISHED,
+    PROJECT_NOT_FINISHED{
+        @Override
+        public String toString() {
+            return "Progetto non finito.";}
+    },
     WRONG_LIST{
         @Override
         public String toString() {

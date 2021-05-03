@@ -20,8 +20,8 @@ public class User implements Serializable {
     private String encPwd; //password criptata per poter essere salvata in memoria
     @Expose
     private transient USER_STATUS userStatus;
+    // TODO: 26/04/21 necessaria questa mutex?
     private transient ReadWriteLock lock; //Variabile di mutua esclusione
-    //TODO descrittore della connessione
 
 // ------ Constructors ------
 

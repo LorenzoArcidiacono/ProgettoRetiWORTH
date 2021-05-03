@@ -48,12 +48,6 @@ public class Card implements com.github.arci0066.worth.interfaces.CardInterface,
     }
 
     //    ----------- Methods ------------
-    @Override
-    // TODO: 22/04/21 Posso eliminarlo?
-    public ANSWER_CODE changeStatus(CARD_STATUS newCardStatus) {
-        return null;
-    }
-
 
     /*
      * REQUIRES: userNick != null && newCardStatus != null
@@ -62,8 +56,6 @@ public class Card implements com.github.arci0066.worth.interfaces.CardInterface,
     */
     @Override
     public ANSWER_CODE moveAndAdjournHistory(String userNickname, CARD_STATUS newCardStatus) {
-//TODO       Se il nuovo stato non è compatibile ritorno errore (dovrebbe controllarlo il progetto)
-// TODO: 14/01/21 dovrei aggiornare dopo lo status
         CARD_STATUS oldCardStatus = cardStatus;
         cardStatus = newCardStatus;
         return cardHistory.add(userNickname, oldCardStatus, newCardStatus);

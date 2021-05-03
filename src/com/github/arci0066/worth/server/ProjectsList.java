@@ -48,7 +48,6 @@ public class ProjectsList  {
 
         String suffix, address;
 
-        // TODO: 14/04/21 passare indirizzo e porta 
         for (Project p : projectsList) {
             //alloco e sistemo le variabili che non sono salvate nel file di backup
             suffix = (++lastUsedIP).toString();
@@ -115,9 +114,13 @@ public class ProjectsList  {
      * EFFECTS: aggiunge il progetto alla lista se questo non è esistente ( Nota. tutti i controlli sono fatti dal chiamante )
      */
     public void add(String projectTitle, String userNickname) {
-        // TODO: 14/04/21 controllare che porta e indirizzo restino nei parametri
         String suffix = (++lastUsedIP).toString();
         String address = multicastIpPrefix + suffix;
+
+        if(lastUsedIP < 0 || lastUsedIP > 255){ //indirizzi da 239.0.0.0 a 239.0.0.255
+            System.err.println("Errore indirizzamento chat del progetto.");
+            return;
+        }
 
         System.out.println("Indirizzo chat del progetto"+projectTitle+":"+address+":"+(lastUsedPort-1));
         lock.writeLock().lock();
@@ -149,7 +152,6 @@ public class ProjectsList  {
      * RETURN: project tale che project.getProjectTitle == projectTitle, null altrimenti
      */
     public Project findProject(String projectTitle) {
-        // TODO: 22/04/21 controllare null
         Project project = null;
 
         lock.readLock().lock();

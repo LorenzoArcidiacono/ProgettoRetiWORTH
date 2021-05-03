@@ -5,11 +5,9 @@ import com.github.arci0066.worth.enumeration.CARD_STATUS;
 
 import java.io.Serial;
 import java.io.Serializable;
-import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 
 
@@ -24,7 +22,6 @@ public class CardHistory implements Serializable {
     public CardHistory(String nickname) {
         dtf = DateTimeFormatter.ofPattern("HH:mm:ss dd/MM/yyyy");
         events = new ArrayList<>();
-//        TODO aggiungere stampa del tempo
         events.add("Creata da @"+nickname + " @ "+dtf.format(LocalDateTime.now()));
     }
 
@@ -36,9 +33,8 @@ public class CardHistory implements Serializable {
      * EFFECTS: aggiunge lo spostamento della card da cardStatus a newCardStatus alla lista degli eventi
      * RETURN: OP_OK se è andata a buon fine, OP_FAIL in caso di errore
     */
-    // TODO: 22/04/21 aggiungere OP_FAIL in caso di errore
     public ANSWER_CODE add(String userNickname, CARD_STATUS cardStatus, CARD_STATUS newCardStatus) {
-        if(dtf == null){
+        if(dtf == null){ //inizializzazione dopo un backup
             dtf = DateTimeFormatter.ofPattern("HH:mm:ss dd/MM/yyyy");
         }
         events.add("@"+userNickname +": " +cardStatus+ " -> " + newCardStatus+ " @"+ dtf.format(LocalDateTime.now()));

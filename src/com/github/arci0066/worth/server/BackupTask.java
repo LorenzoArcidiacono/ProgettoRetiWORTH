@@ -1,9 +1,5 @@
 package com.github.arci0066.worth.server;
 
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.ObjectOutputStream;
 
 public class BackupTask extends Thread {
     private ProjectsList projectsList;

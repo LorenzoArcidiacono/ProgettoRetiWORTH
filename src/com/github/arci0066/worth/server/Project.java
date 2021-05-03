@@ -8,7 +8,6 @@ import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
 import java.net.SocketTimeoutException;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -30,7 +29,7 @@ public class Project implements Serializable {
     private String projectTitle;
     private List<Card> todoList, inProgressList, toBeRevisedList, doneList;
     private List<String> projectUsers; //Lista dei membri del progetto
-    
+
     transient private ReadWriteLock lock; //lock per la mutua esclusione
 
     //--------- CHAT ----------
@@ -112,21 +111,21 @@ public class Project implements Serializable {
         return card;
     }
 
-    // TODO: 15/04/21 controllare che l'utente sia registrato
     public String getCardHistory(String cardTitle, String cardStatus, String userNickname) {
-        String answer;
-        lock.readLock().lock();
-        try {
-            answer = getCard(cardTitle, cardStatus, userNickname).getCardHistory();
-        } finally {
-            lock.readLock().unlock();
+        String answer = null;
+        if (isUserRegisteredToProject(userNickname)) {
+            lock.readLock().lock();
+            try {
+                answer = getCard(cardTitle, cardStatus, userNickname).getCardHistory();
+            } finally {
+                lock.readLock().unlock();
+            }
         }
         return answer;
     }
 
     public String getChatAddress(String userNickname) {
-        // TODO: 15/04/21 lock e controllare per l' utente giusto
-        String chatAddress = null;
+        String chatAddress ;
         if (isUserRegisteredToProject(userNickname)) {
             lock.readLock().lock();
             try {
@@ -181,6 +180,11 @@ public class Project implements Serializable {
         CARD_STATUS fromStatus = getStatus(fromListTitle);
         CARD_STATUS toStatus = getStatus(toListTitle);
         ANSWER_CODE answer = ANSWER_CODE.OP_FAIL;
+
+        if (fromStatus == null || toStatus == null) {
+            return answer;
+        }
+
         if (!checkStep(fromStatus, toStatus))
             return ANSWER_CODE.WRONG_LIST;
         else if (!isUserRegisteredToProject(userNickname))
@@ -192,15 +196,13 @@ public class Project implements Serializable {
             Card card = findCardInList(cardTitle, fromStatus); // In teoria potrebbe trovare la card nella lista DONE, questo non è possibile grazie al controllo sugli step.
             if (card == null) {
                 answer = ANSWER_CODE.UNKNOWN_CARD;
-            } else if (getList(fromStatus).remove(card)) { // Se è rimossa dalla lista e aggiunta alla lista successiva.
-                if (getList(toStatus).add(card)) {
+            } else {
+                if (getList(fromStatus).remove(card)) { // Se è rimossa dalla lista e aggiunta alla lista successiva.
+                    getList(toStatus).add(card);
                     answer = card.moveAndAdjournHistory(userNickname, toStatus); // Provo ad aggiornare la Card e ritorno.
-                } else { // In caso non sia riuscito ad aggiungerla alla lista successiva provo a ripristinare tutto.
-                    getList(fromStatus).add(card);
-                    answer = ANSWER_CODE.OP_FAIL;
                 }
-            } else // In caso non sia riuscita a rimuoverla dalla lista.
-                answer = ANSWER_CODE.OP_FAIL;
+                // In caso non sia riuscita a rimuoverla dalla lista resta OP_FAIL
+            }
         } catch (NullPointerException e) {
             System.err.println("Errore in remove from list: " + e);
         } finally {
@@ -250,7 +252,13 @@ public class Project implements Serializable {
     public ANSWER_CODE cancelProject(String userNickname) {
         if (!isUserRegisteredToProject(userNickname))
             return ANSWER_CODE.PERMISSION_DENIED;
-// TODO: 01/03/21 controllare che tutte le card siano in done!
+
+        //Controllo che tutte le card siano nella lista DONE
+        if (!(todoList.isEmpty()
+                && inProgressList.isEmpty()
+                && toBeRevisedList.isEmpty()))
+            return ANSWER_CODE.PROJECT_NOT_FINISHED;
+
         lock.writeLock().lock();
         try {
             projectTitle = null;
@@ -295,9 +303,9 @@ public class Project implements Serializable {
     }
 
 
-    public String getChatHistory(String senderNickname) {
+    public String getChatHistory() {
         Gson gson = new Gson();
-        String response = "";
+        String response;
         reciveAllMessagge();
         response = gson.toJson(chatMsgs);
         return response;
@@ -315,10 +323,7 @@ public class Project implements Serializable {
             return true;
         else if (fromStatus == CARD_STATUS.INPROGRESS && (toStatus == CARD_STATUS.TOBEREVISED || toStatus == CARD_STATUS.DONE))
             return true;
-        else if (fromStatus == CARD_STATUS.TOBEREVISED && (toStatus == CARD_STATUS.INPROGRESS || toStatus == CARD_STATUS.DONE))
-            return true;
-        else
-            return false;
+        else return fromStatus == CARD_STATUS.TOBEREVISED && (toStatus == CARD_STATUS.INPROGRESS || toStatus == CARD_STATUS.DONE);
     }
 
     /*
@@ -359,7 +364,7 @@ public class Project implements Serializable {
     /*
      * EFFECTS: legge tutti i messaggi inviati sulla chat del progetto dall'ultima invocazione di questo metodo
      *          e li salva in memoria
-    */
+     */
     private void reciveAllMessagge() {
         boolean done = false;
         byte[] data = new byte[1024];
@@ -367,20 +372,17 @@ public class Project implements Serializable {
 
         lock.writeLock().lock();
         try {
-            ms.setSoTimeout(10); // TODO: 22/04/21 usare una variabile
+            ms.setSoTimeout(ServerSettings.MULTICAST_MSG_WAITING);
             while (!done) {
                 ms.receive(dp);
                 String s = new String(dp.getData(), 0, dp.getLength());
                 chatMsgs.add(s);
             }
-        }
-        catch (SocketTimeoutException e){ //Non ci sono altri messaggi in coda quindi posso uscire.
-            done = true;
-        }
-        catch (IOException e) {
+        } catch (SocketTimeoutException e) { //Non ci sono altri messaggi in coda quindi posso uscire.
+            done = true; // TODO: 03/05/21 così è inutile
+        } catch (IOException e) {
             e.printStackTrace();
-        }
-        finally {
+        } finally {
             lock.writeLock().unlock();
         }
     }
@@ -435,9 +437,11 @@ public class Project implements Serializable {
     /*
      * REQUIRES: cardList != null
      * EFFECTS: libera lo spazio di memoria delle singole card della lista e della lista stessa
-    */
+     */
     private void emptyList(List<Card> cardList) {
-        // TODO: 22/04/21 controllare null
+        if (cardList == null) {
+            return;
+        }
         lock.writeLock().lock();
         try {
             for (Card card : cardList) {
@@ -453,9 +457,8 @@ public class Project implements Serializable {
     /*
      * REQUIRES: path != null
      * EFFECTS: chiede di fare il backup di tutte le liste di card
-    */
+     */
     public void saveCard(Path path) {
-        // TODO: 22/04/21 controllare null
         lock.readLock().lock();
         try {
             for (Card crd : todoList) {
@@ -479,9 +482,8 @@ public class Project implements Serializable {
     /*
      * REQUIRES: @params != null
      * EFFECTS: scrive le informazioni della card sul file indicato da path
-    */
+     */
     private void backupCard(Path path, Card crd) {
-        // TODO: 22/04/21 controllare null
         Path cardPath;
         cardPath = Paths.get(path + "/" + crd.getCardTitle() + ".txt");
         try (BufferedWriter writer = Files.newBufferedWriter(cardPath, StandardCharsets.UTF_8)) {
@@ -497,9 +499,8 @@ public class Project implements Serializable {
     /*
      * REQUIRES: @params != null
      * EFFECTS: inizializza gli oggetti dopo che è stato creato un progetto a partire da un backup.
-    */
+     */
     public void resetAfterBackup(String address, int port) {
-        // TODO: 22/04/21 controllare null
         try {
             this.port = port;
             this.address = address;

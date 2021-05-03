@@ -13,6 +13,7 @@ import java.util.List;
 
 public class NotifyEventInterfaceImpl implements NotifyEventInterface {
     private List<String> userList;
+    private List<String> userStatus;
 
     public NotifyEventInterfaceImpl() {
         super();
@@ -23,6 +24,7 @@ public class NotifyEventInterfaceImpl implements NotifyEventInterface {
         // TODO: 09/04/21 stampare meglio la lista degli utenti
         Gson gson = new Gson();
         userList = gson.fromJson(value,new TypeToken<List<String>>(){}.getType());
+        userStatus = userList;
         System.err.println("Ricevuto dal server: "+ userList);
     }
 

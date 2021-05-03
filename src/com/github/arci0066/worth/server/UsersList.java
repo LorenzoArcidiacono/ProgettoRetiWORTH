@@ -97,7 +97,6 @@ public class UsersList {
     }
 
     // ------ Methods ------
-// TODO: 27/01/21 evitare duplicati
     public void add(User user) {
         lock.writeLock().lock();
         try {
@@ -145,7 +144,7 @@ public class UsersList {
 
     public void serialize() {
         try(FileOutputStream fos = new FileOutputStream(ServerSettings.serverBackupDirPath + "/Users.bkp");
-            ObjectOutputStream out = new ObjectOutputStream(fos);) {
+            ObjectOutputStream out = new ObjectOutputStream(fos)) {
             out.writeObject(usersList);
         }
         catch(IOException ex) {ex.printStackTrace();}

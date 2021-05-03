@@ -38,14 +38,6 @@ public class SocketList implements Iterable<Connection>{
         connectionsList.add(new Connection(socket));
     }
 
-    public void remove(Connection connection) throws IOException {
-        // TODO: 26/01/21 devo chiudere il socket??
-        if (connection != null)
-            connection.close();
-            connectionsList.remove(connection);
-    }
-    
-
     @Override
     // TODO: 26/01/21 controllare che si faccia così e che sia thread safe
     // TODO: 22/04/21 sistemare remove per chiudere connessione 

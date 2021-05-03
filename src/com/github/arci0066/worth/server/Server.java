@@ -7,11 +7,8 @@
  */
 package com.github.arci0066.worth.server;
 
-import com.github.arci0066.worth.enumeration.ANSWER_CODE;
 import com.github.arci0066.worth.interfaces.RemoteRegistrationInterface;
 import com.github.arci0066.worth.interfaces.ServerRMI;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 
 import java.io.*;
 import java.net.*;
@@ -46,7 +43,7 @@ public class Server {
 
         //Inizializza gli oggetti
         socketList = SocketList.getSingletonInstance();
-        pool = new ThreadPoolExecutor(ServerSettings.MIN_THREAD_NUMBER, ServerSettings.MAX_THREAD_NUMBER, ServerSettings.THREAD_KEEP_ALIVE_TIME, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>());
+        pool = new ThreadPoolExecutor(ServerSettings.MIN_THREAD_NUMBER, ServerSettings.MAX_THREAD_NUMBER, ServerSettings.THREAD_KEEP_ALIVE_TIME, TimeUnit.SECONDS, new LinkedBlockingQueue<>());
 
         //Crea la directory in cui salvo i progetti e, se esistono, leggo i file di backup
         Path path = Paths.get(serverBackupDirPath);
@@ -57,7 +54,8 @@ public class Server {
         }
 
         //Se presenti legge i file di backup
-        readServerBackup(path);
+        readServerBackup();
+// TODO: 30/04/21 Se i file di backup sono vuoti inizializza manualmente (lo faccio eventualemente nella prima che chiama projectlist e userlist
 
         //Lancia il thread Leader
         leader = new Leader(pool);
@@ -66,7 +64,8 @@ public class Server {
         //Apre la connessione
         try {
             serverSocket = new ServerSocket();
-            serverSocket.bind(new InetSocketAddress(InetAddress.getLocalHost(),ServerSettings.SERVER_PORT));
+            // TODO: 30/04/21 spostare l'indirizzo in ServerSetting
+            serverSocket.bind(new InetSocketAddress(InetAddress.getLocalHost(), ServerSettings.SERVER_PORT));
             System.out.println("Aperta la connessione @ " + InetAddress.getLocalHost() + ":" + ServerSettings.SERVER_PORT);
         } catch (UnknownHostException e) { // TODO: 24/01/21 sistemare return
             e.printStackTrace();
@@ -77,7 +76,7 @@ public class Server {
         }
 
 //        Setta la RMI per la registrazione dei client
-        ServerRMIImpl server = null;
+        ServerRMIImpl server;
         try {
             server = new ServerRMIImpl();
             LocateRegistry.createRegistry(ServerSettings.REGISTRY_PORT);
@@ -99,6 +98,8 @@ public class Server {
             public void run() {
                 System.out.println("In Shutdown Hook");
                 // TODO: 22/01/21 salvare tutto in memoria
+                BackupTask bt = new BackupTask();
+                pool.execute(bt);
                 pool.shutdown();
                 try {
                     // TODO: 22/04/21 vedere se c'è altro da chiudere 
@@ -130,12 +131,12 @@ public class Server {
     /*
      * EFFECTS: Legge i file di backup sul disco e inizializza la lista degli utenti e dei progetti
      */
-    private static void readServerBackup(Path path) { // TODO: 09/04/21 posso eliminare path
-        List<User> registeredUsersList = null;
-        UsersList usersList = null;
+    private static void readServerBackup() {
+        List<User> registeredUsersList;
+        UsersList usersList;
 
-        List<Project> oldProjectsList = null;
-        ProjectsList projectsList = null;
+        List<Project> oldProjectsList;
+        ProjectsList projectsList;
 
         //Leggo il backup della lista utenti registrati
         try (FileInputStream fis = new FileInputStream(usersBackupFile);

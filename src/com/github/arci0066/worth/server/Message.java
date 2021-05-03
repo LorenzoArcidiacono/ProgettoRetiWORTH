@@ -56,9 +56,8 @@ public class Message{
      * EFFECTS: setta il messaggio di risposta da parte del server
     */
     public void setAnswer(ANSWER_CODE answer_code, String extra) {
-        if (answer_code == null || extra == null) {
-            // TODO: 22/04/21 sollevare un' eccezione
-            return;
+        if (answer_code == null) {
+            throw new NullPointerException();
         }
         this.answerCode = answer_code;
         this. extra = extra;
