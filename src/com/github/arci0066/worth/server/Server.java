@@ -93,11 +93,13 @@ public class Server {
             e.printStackTrace();
         }
 
-        // Prepara un Thread di pulizia da lanciare prima della chiusura
+        // Prepara un Thread di pulizia da lanciare prima della chiusura alla ricezione di un SIGINT
         Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
             public void run() {
-                System.out.println("In Shutdown Hook");
+                System.out.println("Server: ricevuto segnale di interruzione.");
                 // TODO: 22/01/21 salvare tutto in memoria
+
+                //Avvio un backup del sistema
                 BackupTask bt = new BackupTask();
                 pool.execute(bt);
                 pool.shutdown();
@@ -107,6 +109,11 @@ public class Server {
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
+
+                //invio in un segnale di interruzione al leader
+                leader.interrupt(); // TODO: 05/05/21 serve fare una join? devo aspettare qualcosa? 
+
+                //chiudo il socket
                 try {
                     // TODO: 22/04/21 vedere se c'è altro da chiudere 
                     serverSocket.close();

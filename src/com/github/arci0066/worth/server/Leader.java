@@ -17,6 +17,7 @@ public class Leader extends Thread {
     private SocketList socketList;
     private ThreadPoolExecutor pool;
     private int countOperation = 0;
+    private boolean exit = false;
 
     // ------ Constructors ------
     public Leader(ThreadPoolExecutor pool) {
@@ -24,10 +25,13 @@ public class Leader extends Thread {
         this.pool = pool;
     }
 
-    // TODO: 26/02/21 salvare tutto prima di uscire
     @Override
     public void run() {
-        while (true) {
+        while (!exit) {
+            if(isInterrupted()) { //controlla se è stato inviato un segnale di interruzione
+                System.out.println("Leader: ricevuto segnale di interruzione");
+                exit = true;
+            }
             //Valuto, in base ai thread attivi e al numero di op. dall'ultimo salvataggio, se sia necessario fare un backup e se è un buon momento
             if ((pool.getActiveCount() <= ServerSettings.THREAD_SAFE_NUMBER && countOperation >= ServerSettings.SAFE_UNSAVED_OPERATION)
                     || countOperation >= ServerSettings.MAX_UNSAVED_OPERATION) {

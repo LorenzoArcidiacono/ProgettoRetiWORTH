@@ -30,7 +30,6 @@ public class ServerRMIImpl extends RemoteServer implements ServerRMI {
             String registeredUserList;
             synchronized (usersList) { //TODO capire se serve sincronizzare
                 registeredUserList = usersList.jsonString(); // TODO: 09/04/21 Meglio così o json?
-                System.err.println("ServerRMIImpl "+registeredUserList+"\n In teoria "+usersList.jsonString());// TODO: 26/04/21 cancellare
             }
             update(registeredUserList);
         }

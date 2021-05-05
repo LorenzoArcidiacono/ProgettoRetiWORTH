@@ -148,8 +148,6 @@ public class Client {
                     break;
                 }
 
-                System.out.println(userStatus);
-
                 //Scelgo l'operazione e setta il messaggio da inviare al server di conseguenza
                 Message msg = null;
                 printOperationMenu();
@@ -411,7 +409,7 @@ public class Client {
     // TODO: 20/04/21 rendere questo un metodo locale in base a una struttura locale
     private static void listUsers() {
         synchronized (userStatus) {
-            System.out.println("Utenti:\n" + userStatus);
+            System.out.println("\n@> Utenti: " + userStatus);
         }
         // TODO: 05/05/21 eliminarlo da Task
         //return new Message(nickname, null, OP_CODE.LIST_USER, null, null, null);
@@ -419,7 +417,7 @@ public class Client {
 
     // TODO: 20/04/21 rendere questo un metodo locale in base a una struttura locale
     private static void listOnlineUsers() {
-        String online = "Utenti Online:\n";
+        String online = "\n@> Utenti Online:\n";
         synchronized (userStatus) {
             for (String s : userStatus) {
                 if (s.contains(USER_STATUS.ONLINE.toString())) {

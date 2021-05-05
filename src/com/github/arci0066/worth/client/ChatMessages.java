@@ -34,7 +34,7 @@ public class ChatMessages {
     public String getMessages() {
         String response= "";
         if(messages.isEmpty())
-            return "\n@> - Nessun nuovo messaggio -\n";
+            return "\n@> - - Nessun nuovo messaggio - -\n";
         for (String str: messages) {
             response += str +"\n";
         }
