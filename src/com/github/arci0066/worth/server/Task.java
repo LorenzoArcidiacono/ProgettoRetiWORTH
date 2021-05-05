@@ -125,7 +125,7 @@ public class Task extends Thread {
                 try {
                     connection.close();
                     registeredUsersList.findUser(message.getSenderNickname()).logout(); // TODO: 30/04/21 Se l'utente non esiste NullPointerException
-                } catch (IOException e) {
+                } catch (IOException | NullPointerException e) {
                     e.printStackTrace();
                 }
             }
@@ -273,11 +273,9 @@ public class Task extends Thread {
         if (findUserByNickname(userNickname) == null) {
             return ANSWER_CODE.UNKNOWN_USER;
         }
-        synchronized (projectsList) { // TODO ALTERNATIVE
-            if (findProjectByTitle(projectTitle) == null) {
-                projectsList.add(projectTitle, userNickname);
-                return ANSWER_CODE.OP_OK;
-            }
+        if (findProjectByTitle(projectTitle) == null) {
+            projectsList.add(projectTitle, userNickname);
+            return ANSWER_CODE.OP_OK;
         }
         return ANSWER_CODE.EXISTING_PROJECT;
     }
@@ -445,7 +443,6 @@ public class Task extends Thread {
     private String getProjectChat(String projectTitle, String senderNickname) {
         if (isNull(projectTitle, senderNickname)) {
             return null;
-            // TODO: 22/04/21 sollevare eccezione?
         }
         if (findUserByNickname(senderNickname) == null) {
             return null;
@@ -496,10 +493,12 @@ public class Task extends Thread {
         }
 
         Project prj = findProjectByTitle(projectTitle);
-        if (prj != null) {
-            prj.cancelProject(userNickname);
-            projectsList.remove(prj);
-            return ANSWER_CODE.OP_OK;
+        if (prj != null) { // TODO: 03/05/21 pulire
+            //ANSWER_CODE answer = prj.cancelProject(userNickname);
+            //if (answer == ANSWER_CODE.OP_OK) {
+                return projectsList.remove(prj,userNickname);
+                //return ANSWER_CODE.OP_OK;
+            //}
         }
         return ANSWER_CODE.UNKNOWN_PROJECT;
     }
@@ -511,7 +510,6 @@ public class Task extends Thread {
     /*
      * RETURN: true se tutte le stringhe sono diverse da null
      */
-    // TODO: 22/04/21 sostituire dove serve
     private boolean isNull(String... strings) {
         for (String str : strings) {
             if (str == null) {

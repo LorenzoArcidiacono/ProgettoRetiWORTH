@@ -9,6 +9,7 @@ package com.github.arci0066.worth.client;
 
 import com.github.arci0066.worth.enumeration.ANSWER_CODE;
 import com.github.arci0066.worth.enumeration.OP_CODE;
+import com.github.arci0066.worth.enumeration.USER_STATUS;
 import com.github.arci0066.worth.interfaces.NotifyEventInterface;
 import com.github.arci0066.worth.interfaces.RemoteRegistrationInterface;
 import com.github.arci0066.worth.interfaces.ServerRMI;
@@ -26,6 +27,7 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
+import java.util.InputMismatchException;
 import java.util.List;
 import java.util.Scanner;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -80,7 +82,7 @@ public class Client {
 
         //Uso CopyOnWriteArrayList perchè sia thread safe
         chatAddresses = new CopyOnWriteArrayList<>();
-        chatMessages = new CopyOnWriteArrayList<>(); // TODO: 26/04/21 Qui in realtà molte scritture poche letture 
+        chatMessages = new CopyOnWriteArrayList<>(); // TODO: 26/04/21 Qui in realtà molte scritture poche letture ma aggiunge più messaggi in un colpo solo... synchronize??
 
         //Primo menu per la scelta di come accedere
         int operazione;
@@ -98,7 +100,7 @@ public class Client {
                 serverObj = (RemoteRegistrationInterface) remote;
 // TODO: 09/04/21 dovrei farlo dopo che si è registrato
                 serverInterface = (ServerRMI) registry.lookup("SERVER");
-                callbackObj = new NotifyEventInterfaceImpl();
+                callbackObj = new NotifyEventInterfaceImpl(userStatus);
                 stub = (NotifyEventInterface) UnicastRemoteObject.exportObject(callbackObj, 0);
             } catch (RemoteException | NotBoundException e) {
                 e.printStackTrace();
@@ -146,6 +148,7 @@ public class Client {
                     break;
                 }
 
+                System.out.println(userStatus);
 
                 //Scelgo l'operazione e setta il messaggio da inviare al server di conseguenza
                 Message msg = null;
@@ -157,8 +160,8 @@ public class Client {
                         msg = logout();
                         exit = true;
                     }
-                    case 3 -> msg = listUsers();
-                    case 4 -> msg = listOnlineUsers();
+                    case 3 -> listUsers();
+                    case 4 -> listOnlineUsers();
                     case 5 -> msg = listProjects();
                     case 6 -> msg = createProject();
                     case 7 -> msg = addMember();
@@ -177,7 +180,7 @@ public class Client {
                     }
                     default -> {
                         System.out.println("\n@> Scelta non valida.\n");
-                        continue;
+                        //continue;
                     }
                 }
 
@@ -190,20 +193,20 @@ public class Client {
                 }
 
             }
-            try {
-                //Chiudo tutte le comunicazioni e i buffer, deregistro il client dalle callback
-                System.out.println("Chiudo Socket"); // TODO: 26/04/21 da levare una volta finito il testing
-                scanner.close();
-                clientSocket.close();
-                readerIn.close();
-                writerOut.close();
-                serverInterface.unregisterForCallback(stub);
-                for (ChatAddress ca : chatAddresses) {
-                    ca.getMulticastSocket().close();
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
+        }
+        try {
+            //Chiudo tutte le comunicazioni e i buffer, deregistro il client dalle callback
+            System.out.println("Chiudo Socket"); // TODO: 26/04/21 da levare una volta finito il testing
+            scanner.close();
+            clientSocket.close();
+            readerIn.close();
+            writerOut.close();
+            serverInterface.unregisterForCallback(stub);
+            for (ChatAddress ca : chatAddresses) {
+                ca.getMulticastSocket().close();
             }
+        } catch (IOException e) { // TODO: 03/05/21 se esco al primo menù sulleva di sicuro eccezioni 
+            e.printStackTrace();
         }
         System.out.println("Esco dal programma.");
     }
@@ -275,15 +278,16 @@ public class Client {
         switch (answer.getOperationCode()) {
             case LIST_USER, LIST_ONLINE_USER, LIST_PROJECTS, SHOW_CARD, SHOW_MEMBERS, SHOW_PROJECT_CARDS, GET_CARD_HISTORY: {
                 if (answer.getAnswerCode().equals(ANSWER_CODE.OP_OK)) {
-                    System.out.println("@> " + answer.getExtra() + "\n");
+                    System.out.println("\n@> " + answer.getExtra() + "\n");
                 }
                 break;
             }
             case GET_PRJ_CHAT: {
                 if (answer.getAnswerCode().equals(ANSWER_CODE.OP_OK)) {
-                    if (answer.getExtra().equals("Utente non membro del progetto.")) // TODO: 15/04/21 sarebbe carino metterlo come stringa predefinita
-                        System.out.println("@> " + answer.getExtra() + "\n");
-                    else {
+                    if (answer.getExtra().equals("Utente non membro del progetto.")) { // TODO: 15/04/21 sarebbe carino metterlo come stringa predefinita
+                        System.out.println("\n@> " + answer.getExtra() + "\n");
+                        return ANSWER_CODE.PERMISSION_DENIED;
+                    } else {
                         try {
                             //synchronized (chatAddresses) {
                             chatAddresses.add(new ChatAddress(answer.getProjectTitle(), answer.getExtra()));
@@ -316,12 +320,19 @@ public class Client {
 
 
     /*
-     * EFFECTS: legge il numero selezionato dall' utente
+     * EFFECTS: legge il numero selezionato dall'utente
      * RETURN: il numero letto
      */
     private static int scegliOperazione() {
         System.out.print("Inserisci numero operazione e premi invio: ");
-        return scanner.nextInt();
+        int i;
+        try {
+            i = scanner.nextInt();
+        } catch (InputMismatchException e) {
+            scanner.next(); //pulisco l'input per evitare che rimangano dati compromessi da leggere
+            i = -1;
+        }
+        return i;
     }
 
 
@@ -397,13 +408,23 @@ public class Client {
 
 
     // TODO: 20/04/21 rendere questo un metodo locale in base a una struttura locale
-    private static Message listUsers() {
-        return new Message(nickname, null, OP_CODE.LIST_USER, null, null, null);
+    private static void listUsers() {
+        System.out.println("Utenti:\n" + userStatus);
+        // TODO: 05/05/21 eliminarlo da Task
+        //return new Message(nickname, null, OP_CODE.LIST_USER, null, null, null);
     }
 
     // TODO: 20/04/21 rendere questo un metodo locale in base a una struttura locale
-    private static Message listOnlineUsers() {
-        return new Message(nickname, null, OP_CODE.LIST_ONLINE_USER, null, null, null);
+    private static void listOnlineUsers() {
+        String online = "Utenti Online:\n";
+        for (String s : userStatus) {
+            if (s.contains(USER_STATUS.ONLINE.toString())) {
+                online += s + "\n";
+            }
+        }
+        System.out.println(online);
+        // TODO: 05/05/21 eliminarlo da Task
+        //return new Message(nickname, null, OP_CODE.LIST_ONLINE_USER, null, null, null);
     }
 
     /*
@@ -422,6 +443,12 @@ public class Client {
         String projectTitle;
         System.out.print("Inserire il Titolo del Progetto:");
         projectTitle = scanner.next();
+
+        //Controllo che il titolo sia ammissibile
+        if (projectTitle.equals(".") || projectTitle.equals("..") || projectTitle.equals("") || projectTitle.startsWith(".")) {
+            System.err.println("Errore di titolo.");
+            return null;
+        }
         return new Message(nickname, null, OP_CODE.CREATE_PROJECT, projectTitle, null, null);
     }
 
@@ -487,6 +514,13 @@ public class Client {
         card = scanner.next();
         System.out.print("Inserire descrizione della Card:");
         desc = scanner.next();
+
+        //Controllo che il titolo della card e della descrizione siano ammissibili
+        if (card.equals(".") || card.equals("") || card.equals("..") || card.startsWith(".")
+                || desc.equals(".") || desc.equals("") || desc.equals("..")) {
+            System.err.println("Errore nel titolo o nella descrizione.");
+            return null;
+        }
         return new Message(nickname, desc, OP_CODE.ADD_CARD, projectTitle, card, null);
     }
 
@@ -557,7 +591,7 @@ public class Client {
             response = requestProjectChat(projectTitle);
             // TODO: 15/04/21 in realtà in ogni caso ritorna op_ok... dovrei cambiare questa cosa
             if (response != ANSWER_CODE.OP_OK) {
-                System.err.println("@> " + response + ": messaggio non inviato.");
+                System.err.println("@> " + response + " Messaggio non inviato.");
                 return;
             }
             chatAddress = getProjectChatAddress(projectTitle);

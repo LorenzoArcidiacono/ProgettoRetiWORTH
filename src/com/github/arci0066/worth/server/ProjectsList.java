@@ -6,6 +6,8 @@
 *
 */
 package com.github.arci0066.worth.server;
+import com.github.arci0066.worth.enumeration.ANSWER_CODE;
+
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -114,9 +116,11 @@ public class ProjectsList  {
      * EFFECTS: aggiunge il progetto alla lista se questo non è esistente ( Nota. tutti i controlli sono fatti dal chiamante )
      */
     public void add(String projectTitle, String userNickname) {
+        lock.writeLock().lock(); // TODO: 03/05/21 Serve questa lock? se aggiungo due progetti in contemporanea 
         String suffix = (++lastUsedIP).toString();
         String address = multicastIpPrefix + suffix;
-
+        lock.writeLock().unlock();
+        
         if(lastUsedIP < 0 || lastUsedIP > 255){ //indirizzi da 239.0.0.0 a 239.0.0.255
             System.err.println("Errore indirizzamento chat del progetto.");
             return;
@@ -136,15 +140,42 @@ public class ProjectsList  {
      * REQUIRES: project != null
      * EFFECTS: rimuove il progetto alla lista se questo esiste ( Nota. tutti i controlli sono fatti dal chiamante )
      */
-    public void remove(Project project) {
-        lock.writeLock().lock();
-        try {
-            projectsList.remove(project);
-        } finally {
-            lock.writeLock().unlock();
+    public ANSWER_CODE remove(Project project, String userNickname) {
+        //Salvo il path della cartella
+        Path path = Paths.get(serverBackupDirPath + "/" + project.getProjectTitle());
+
+        //Controllo di poter cancellare il progetto
+        ANSWER_CODE answer = project.isCancellable(userNickname);
+
+        if (answer == ANSWER_CODE.OP_OK){
+            //cancello il progetto dalla lista e libero la memoria
+            lock.writeLock().lock();
+            try {
+                projectsList.remove(project);
+                project.cancelProject(userNickname);
+            } finally {
+                lock.writeLock().unlock();
+            }
+            //Cancello la cartella dal File System
+            if(Files.isDirectory(path)){
+                deleteDir(new File(String.valueOf(path)));
+            }
         }
+        return answer;
     }
 
+    private void deleteDir(File file) {
+        File[] contents = file.listFiles();
+        System.err.println(contents);
+        if (contents != null) {
+            for (File f : contents) {
+                if (! Files.isSymbolicLink(f.toPath())) {
+                    deleteDir(f);
+                }
+            }
+        }
+        file.delete();
+    }
 
     /*
      * REQUIRES: projectTitle != null

@@ -125,7 +125,7 @@ public class Project implements Serializable {
     }
 
     public String getChatAddress(String userNickname) {
-        String chatAddress ;
+        String chatAddress;
         if (isUserRegisteredToProject(userNickname)) {
             lock.readLock().lock();
             try {
@@ -249,15 +249,7 @@ public class Project implements Serializable {
      *          || PERMISSIONE_DENIED se l'utente non è registrato al progetto
      *          || PROJECT_NOT_FINISHED se ci sono card | card.getCardStatus != DONE
      */
-    public ANSWER_CODE cancelProject(String userNickname) {
-        if (!isUserRegisteredToProject(userNickname))
-            return ANSWER_CODE.PERMISSION_DENIED;
-
-        //Controllo che tutte le card siano nella lista DONE
-        if (!(todoList.isEmpty()
-                && inProgressList.isEmpty()
-                && toBeRevisedList.isEmpty()))
-            return ANSWER_CODE.PROJECT_NOT_FINISHED;
+    public void cancelProject(String userNickname) {
 
         lock.writeLock().lock();
         try {
@@ -271,9 +263,20 @@ public class Project implements Serializable {
         } finally {
             lock.writeLock().unlock();
         }
-        return ANSWER_CODE.OP_OK;
     }
 
+    public ANSWER_CODE isCancellable(String userNickname) {
+        if (!isUserRegisteredToProject(userNickname))
+            return ANSWER_CODE.PERMISSION_DENIED;
+
+        //Controllo che tutte le card siano nella lista DONE
+        if (!(todoList.isEmpty()
+                && inProgressList.isEmpty()
+                && toBeRevisedList.isEmpty()))
+            return ANSWER_CODE.PROJECT_NOT_FINISHED;
+
+        return ANSWER_CODE.OP_OK;
+    }
 
     /*
      * REQUIRES: userNickname registrato al progetto
@@ -282,17 +285,17 @@ public class Project implements Serializable {
      */
     public String showCards(String userNickname) {
 
-        reciveAllMessagge();
+        //reciveAllMessagge(); // TODO: 03/05/21 ????
 
         String answer;
         if (isUserRegisteredToProject(userNickname)) {
             lock.readLock().lock();
             try {
                 answer = "Progetto: " + projectTitle +
-                        ",\n Todo: " + todoList.toString() +
-                        ",\n In Progress: " + inProgressList.toString() +
-                        ",\n To Be Revised: " + toBeRevisedList.toString() +
-                        ",\n Done: " + doneList.toString();
+                        "\n Todo: " + printList(todoList) +
+                        "\n In Progress: " + printList(inProgressList) +
+                        "\n To Be Revised: " + printList(toBeRevisedList) +
+                        "\n Done: " + printList(doneList);
             } finally {
                 lock.readLock().unlock();
             }
@@ -323,7 +326,8 @@ public class Project implements Serializable {
             return true;
         else if (fromStatus == CARD_STATUS.INPROGRESS && (toStatus == CARD_STATUS.TOBEREVISED || toStatus == CARD_STATUS.DONE))
             return true;
-        else return fromStatus == CARD_STATUS.TOBEREVISED && (toStatus == CARD_STATUS.INPROGRESS || toStatus == CARD_STATUS.DONE);
+        else
+            return fromStatus == CARD_STATUS.TOBEREVISED && (toStatus == CARD_STATUS.INPROGRESS || toStatus == CARD_STATUS.DONE);
     }
 
     /*
@@ -343,6 +347,14 @@ public class Project implements Serializable {
         }
         //TODO se si blocca qui e un altro thread la sposta????
         return card;
+    }
+
+    private String printList(List<Card> list) {
+        String s = "";
+        for (Card c : list) {
+            s += c.getCardTitle() + ",";
+        }
+        return s;
     }
 
     /*
@@ -514,6 +526,4 @@ public class Project implements Serializable {
         lock = new ReentrantReadWriteLock();
 
     }
-
-
 }

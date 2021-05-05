@@ -102,6 +102,12 @@ public class Server {
                 pool.execute(bt);
                 pool.shutdown();
                 try {
+                    //aspetto che il backup ed eventuali altri task siano finiti
+                    pool.awaitTermination(10,TimeUnit.SECONDS);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                try {
                     // TODO: 22/04/21 vedere se c'è altro da chiudere 
                     serverSocket.close();
                 } catch (IOException e) {
