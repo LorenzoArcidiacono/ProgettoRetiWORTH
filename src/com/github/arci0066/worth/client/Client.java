@@ -19,7 +19,6 @@ import com.google.gson.Gson;
 
 import java.io.*;
 import java.net.*;
-import java.rmi.AccessException;
 import java.rmi.NotBoundException;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
@@ -64,6 +63,7 @@ public class Client {
     private static Gson gson;
     private static File inputFileTest;
     private static Scanner scanner;    //Per leggere le richieste da tastiera o da file di input
+    static Thread daemon;
 
     public static void main(String[] args) {
 
@@ -98,7 +98,7 @@ public class Client {
                 registry = LocateRegistry.getRegistry(ServerSettings.REGISTRY_PORT);
                 remote = registry.lookup(ServerSettings.REGISRTY_OP_NAME);
                 serverObj = (RemoteRegistrationInterface) remote;
-// TODO: 09/04/21 dovrei farlo dopo che si è registrato
+        // TODO: 09/04/21 dovrei farlo dopo che si è registrato
                 serverInterface = (ServerRMI) registry.lookup("SERVER");
                 callbackObj = new NotifyEventInterfaceImpl(userStatus);
                 stub = (NotifyEventInterface) UnicastRemoteObject.exportObject(callbackObj, 0);
@@ -139,7 +139,7 @@ public class Client {
                 e.printStackTrace();
             }
             //avvio il thread daemon che si occupa di leggere le chat dei progetti
-            daemonChatSniffer();
+            daemon = daemonChatSniffer();
 
             // Loop principale in cui scegliere le operazioni
             while (!exit) {
@@ -195,7 +195,8 @@ public class Client {
             }
         }
         try {
-            //Chiudo tutte le comunicazioni e i buffer, deregistro il client dalle callback
+            //Chiudo tutte le comunicazioni e i buffer, deregistro il client dalle callback e chiudo il thread daemon
+            daemon.interrupt(); // TODO: 05/05/21 controllare che sia corretto
             System.out.println("Chiudo Socket"); // TODO: 26/04/21 da levare una volta finito il testing
             scanner.close();
             clientSocket.close();
@@ -409,7 +410,9 @@ public class Client {
 
     // TODO: 20/04/21 rendere questo un metodo locale in base a una struttura locale
     private static void listUsers() {
-        System.out.println("Utenti:\n" + userStatus);
+        synchronized (userStatus) {
+            System.out.println("Utenti:\n" + userStatus);
+        }
         // TODO: 05/05/21 eliminarlo da Task
         //return new Message(nickname, null, OP_CODE.LIST_USER, null, null, null);
     }
@@ -417,9 +420,11 @@ public class Client {
     // TODO: 20/04/21 rendere questo un metodo locale in base a una struttura locale
     private static void listOnlineUsers() {
         String online = "Utenti Online:\n";
-        for (String s : userStatus) {
-            if (s.contains(USER_STATUS.ONLINE.toString())) {
-                online += s + "\n";
+        synchronized (userStatus) {
+            for (String s : userStatus) {
+                if (s.contains(USER_STATUS.ONLINE.toString())) {
+                    online += s + "\n";
+                }
             }
         }
         System.out.println(online);
@@ -636,7 +641,7 @@ public class Client {
      * EFFECTS: avvia un thread daemon che si occupa di ricevere i messaggi dalle chat dei progetti
      *          e salvarli in memoria.
      */
-    private static void daemonChatSniffer() {
+    private static Thread daemonChatSniffer() {
         Thread t = new Thread() {
             @Override
             public void run() {
@@ -657,8 +662,8 @@ public class Client {
                         try {
                             Thread.sleep(1000);
                             continue;
-                        } catch (InterruptedException e) {
-                            e.printStackTrace();
+                        } catch (InterruptedException e) { //Caso in cui venga interrotto durante la sleep
+                            return;
                         }
                     }
                     chat = chatAddresses.get(index);
@@ -687,6 +692,7 @@ public class Client {
         };
         t.setDaemon(true);
         t.start();
+        return t;
     }
 
     // TODO: 20/04/21 mettere insieme chatMessages e chatAddresses 

@@ -62,14 +62,14 @@ public class Task extends Thread {
                 }
                 break;
             }
-            case LIST_USER: {
+            /*case LIST_USER: {
                 string = listUsers();
                 break;
             }
             case LIST_ONLINE_USER: {
                 string = listOnlineUsers();
                 break;
-            }
+            }*/
             case LIST_PROJECTS: {
                 string = listProjects();
                 break;
@@ -231,9 +231,9 @@ public class Task extends Thread {
      * RETURN: Una stringa contenente i nickname degli utenti registrati
      */
     //Meglio se restituisse una List? No lui non deve manipolare nulla
-    public String listUsers() {
+    /*public String listUsers() {
         return registeredUsersList.getUsersNickname();
-    }
+    }*/
 
     /*
      * REQUIRES:
@@ -241,9 +241,9 @@ public class Task extends Thread {
      * RETURN: Una stringa contenente i nickname degli utenti online
      */
     //Meglio se restituisse una List? No lui non deve manipolare nulla
-    public String listOnlineUsers() {
+ /*   public String listOnlineUsers() {
         return registeredUsersList.getOnlineUsersNickname();
-    }
+    }*/
 
 
     /*

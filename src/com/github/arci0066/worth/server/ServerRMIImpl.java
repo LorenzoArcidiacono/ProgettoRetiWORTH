@@ -43,12 +43,15 @@ public class ServerRMIImpl extends RemoteServer implements ServerRMI {
                 System.out.println("Client deregistrato dalla callback");
             else
                 System.err.println("Unable to unregister client");
+            //notifico in caso di chiusura di un client
+            update(usersList.jsonString());
         }
 
 
     /* notifica di una variazione di valore dell'azione
 /* quando viene richiamato, fa il callback a tutti i client
 registrati */
+    // TODO: 05/05/21 dovrebbe essere chiamata anche in caso di logout per notificare
     public void update(String value) throws RemoteException {
         doCallbacks(value);
     }
