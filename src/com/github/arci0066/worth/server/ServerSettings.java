@@ -31,7 +31,7 @@ public class ServerSettings {
     public static final int REGISTRY_PORT = 65534; // Porta per la RMI
     public static final String REGISRTY_OP_NAME = "SERVER_REGISTRATION"; // Nome della RMI
 
-    public  static final int MULTICAST_MSG_WAITING = 10; //Tempo di attesa su una connessione UDP multicast
+    public  static final int MULTICAST_MSG_WAITING = 100; //Tempo di attesa su una connessione UDP multicast
 
     //IP multicast unassigned 233.252.1.32-233.252.1.255 o 239.0.0.0-239.255.255.255
     // ( https://www.iana.org/assignments/multicast-addresses/multicast-addresses.xhtml )

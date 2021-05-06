@@ -53,9 +53,9 @@ public class Server {
             e.printStackTrace();
         }
 
-        //Se presenti legge i file di backup
+        //Se presenti legge i file di backup,
+        //in caso questi non esistano ancora UsersList e ProjectsList saranno inizializzati dalla prima chiamata a getSingleton()
         readServerBackup();
-// TODO: 30/04/21 Se i file di backup sono vuoti inizializza manualmente (lo faccio eventualemente nella prima che chiama projectlist e userlist
 
         //Lancia il thread Leader
         leader = new Leader(pool);
@@ -91,13 +91,13 @@ public class Server {
             registry.rebind(ServerSettings.REGISRTY_OP_NAME, stub);
         } catch (RemoteException e) {
             e.printStackTrace();
+            return;
         }
 
         // Prepara un Thread di pulizia da lanciare prima della chiusura alla ricezione di un SIGINT
         Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
             public void run() {
                 System.out.println("Server: ricevuto segnale di interruzione.");
-                // TODO: 22/01/21 salvare tutto in memoria
 
                 //Avvio un backup del sistema
                 BackupTask bt = new BackupTask();
@@ -111,11 +111,9 @@ public class Server {
                 }
 
                 //invio in un segnale di interruzione al leader
-                leader.interrupt(); // TODO: 05/05/21 serve fare una join? devo aspettare qualcosa? 
-
+                leader.interrupt(); // TODO: 05/05/21 serve fare una join? devo aspettare qualcosa?
                 //chiudo il socket
                 try {
-                    // TODO: 22/04/21 vedere se c'è altro da chiudere 
                     serverSocket.close();
                 } catch (IOException e) {
                     e.printStackTrace();
@@ -125,7 +123,7 @@ public class Server {
 
 
         //Ciclo principale
-        while (!exit) { // TODO: 09/04/21 implementare qualcosa che riconosca il messaggio di stop
+        while (true) { // TODO: 09/04/21 implementare qualcosa che riconosca il messaggio di stop
             //Aspetta una connessione
             Socket client;
             try {

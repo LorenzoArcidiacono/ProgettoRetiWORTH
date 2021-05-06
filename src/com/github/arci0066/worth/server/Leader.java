@@ -9,6 +9,7 @@ package com.github.arci0066.worth.server;
 
 
 import java.io.IOException;
+import java.net.SocketException;
 import java.util.Iterator;
 import java.util.concurrent.ThreadPoolExecutor;
 

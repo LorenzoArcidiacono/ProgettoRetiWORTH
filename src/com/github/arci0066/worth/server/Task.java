@@ -45,6 +45,15 @@ public class Task extends Thread {
             System.err.println("Errore ricezione messaggio.");
             return;
         }
+
+        if(!findUserByNickname(message.getSenderNickname()).isOnline() && !message.getOperationCode().equals(OP_CODE.LOGIN)){ //in caso il mittente risulti offline
+            message.setAnswer(ANSWER_CODE.USER_OFFLINE,null);
+            try {
+                sendAnswer();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
         System.out.println("Messaggio ricevuto: " + message);
         ANSWER_CODE answer_code = ANSWER_CODE.OP_OK;
         String string = message.getExtra();
@@ -121,14 +130,14 @@ public class Task extends Thread {
                 string = getChatHistory(message.getProjectTitle(), message.getSenderNickname());
                 break;
             }
-            case CLOSE_CONNECTION: {
+            /*case CLOSE_CONNECTION: {
                 try {
                     connection.close();
                     registeredUsersList.findUser(message.getSenderNickname()).logout(); // TODO: 30/04/21 Se l'utente non esiste NullPointerException
                 } catch (IOException | NullPointerException e) {
                     e.printStackTrace();
                 }
-            }
+            }*/
             default: {
                 answer_code = ANSWER_CODE.OP_FAIL;
                 string = null;

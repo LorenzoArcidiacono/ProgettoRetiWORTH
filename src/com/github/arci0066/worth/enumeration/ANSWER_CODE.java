@@ -11,7 +11,13 @@ public enum ANSWER_CODE {
     OP_FAIL{
         @Override
         public String toString() {
-            return "Errore durante l'operazione";
+            return "Errore durante l'operazione.";
+        }
+    },
+    USER_OFFLINE{
+        @Override
+        public String toString() {
+            return "Utente attualmente offline.";
         }
     },
     UNKNOWN_PROJECT{

@@ -97,7 +97,7 @@ public class Project implements Serializable {
      * REQUIRES: @params != null && userNickname appartiene al progetto
      * RETURN: restituisce la card con titolo = cardTitle, null altrimenti
      */
-    // TODO: 14/01/21 passare una copia? una stringa?
+    // TODO: 14/01/21 passare una copia? una stringa? in realtà è usata in sola lettura
     public Card getCard(String cardTitle, String cardStatus, String userNickname) {
         Card card = null;
         if (isUserRegisteredToProject(userNickname)) {
@@ -135,7 +135,7 @@ public class Project implements Serializable {
             }
             return chatAddress;
         }
-        return UTENTE_ERRATO;
+        return ANSWER_CODE.PERMISSION_DENIED.toString();
     }
 
 // ------ Methods ------
@@ -240,8 +240,6 @@ public class Project implements Serializable {
         return answer;
     }
 
-    // TODO: 12/01/21 implementare
-
     /*
      * REQUIRES: userNickname != null && userNickname registrato al progetto
      * EFFECTS: se tutte le card sono segnate come done chiude il progetto
@@ -285,8 +283,6 @@ public class Project implements Serializable {
      */
     public String showCards(String userNickname) {
 
-        //reciveAllMessagge(); // TODO: 03/05/21 ????
-
         String answer;
         if (isUserRegisteredToProject(userNickname)) {
             lock.readLock().lock();
@@ -301,7 +297,6 @@ public class Project implements Serializable {
             }
             return answer;
         }
-        // TODO: 01/03/21 cambiare con una risposta standard
         return ANSWER_CODE.PERMISSION_DENIED.toString();
     }
 
@@ -345,7 +340,7 @@ public class Project implements Serializable {
                 card = crd;
             }
         }
-        //TODO se si blocca qui e un altro thread la sposta????
+        //TODO se si blocca qui e un altro thread la sposta???? in realtà mi basta trovarla, se viene spostata lo leggo anche dopo
         return card;
     }
 
@@ -391,7 +386,7 @@ public class Project implements Serializable {
                 chatMsgs.add(s);
             }
         } catch (SocketTimeoutException e) { //Non ci sono altri messaggi in coda quindi posso uscire.
-            done = true; // TODO: 03/05/21 così è inutile
+             // TODO: 03/05/21 esco dal ciclo
         } catch (IOException e) {
             e.printStackTrace();
         } finally {

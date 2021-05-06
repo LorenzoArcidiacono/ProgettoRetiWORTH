@@ -33,8 +33,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 
 public class Client {
-
-
+    
     // -------- DATI UTENTE ---------
     private static String password;
     private static String nickname;
@@ -98,7 +97,6 @@ public class Client {
                 registry = LocateRegistry.getRegistry(ServerSettings.REGISTRY_PORT);
                 remote = registry.lookup(ServerSettings.REGISRTY_OP_NAME);
                 serverObj = (RemoteRegistrationInterface) remote;
-        // TODO: 09/04/21 dovrei farlo dopo che si è registrato
                 serverInterface = (ServerRMI) registry.lookup("SERVER");
                 callbackObj = new NotifyEventInterfaceImpl(userStatus);
                 stub = (NotifyEventInterface) UnicastRemoteObject.exportObject(callbackObj, 0);
@@ -112,12 +110,12 @@ public class Client {
             case 2 -> message = login();
             default -> exit = true; // TODO: 27/01/21 riprovare
         }
-        // TODO: 09/04/21 se esco qui non faccio pulizia!
+
         if (!check) { //registrazione non andata a buon fine
             System.err.println("È avvenuto un errore durante la registrazione.");
             exit = true;
         }
-        if (!exit) { // TODO: 22/04/21 posso evitarlo?
+        if (!exit) { //se l'op è login oppure mi sono appena registrato
             if (!openConnection()) { //Apre la connessione TCP verso il server
                 exit = true;
                 System.err.println("Errore di connessione.");
@@ -131,7 +129,7 @@ public class Client {
                 }
             }
         }
-        if (!exit) { // Se la connessione è stata stabilita
+        if (!exit) { // Se la connessione è stata stabilita e l'operazione è andata a buon fine
             System.out.println("Client: connesso al server.");
             try { // mi registro per le future callback sullo stato degli utenti
                 serverInterface.registerForCallback(stub);
@@ -148,34 +146,34 @@ public class Client {
                     break;
                 }
 
-                //Scelgo l'operazione e setta il messaggio da inviare al server di conseguenza
+                //Scelgo l'operazione e setto il messaggio da inviare al server di conseguenza
                 Message msg = null;
                 printOperationMenu();
                 operazione = scegliOperazione();
                 switch (operazione) {
-                    case 1 -> msg = login(); // TODO: 23/01/21 posso eliminarlo e se logout lo mando al menù prima; chiede di nuovo Nick e pwd
-                    case 2 -> {
+                    //case 1 -> msg = login(); // TODO: 23/01/21 posso eliminarlo
+                    case 1 -> {
                         msg = logout();
                         exit = true;
                     }
-                    case 3 -> listUsers();
-                    case 4 -> listOnlineUsers();
-                    case 5 -> msg = listProjects();
-                    case 6 -> msg = createProject();
-                    case 7 -> msg = addMember();
-                    case 8 -> msg = showMember();
-                    case 9 -> msg = showProjectCards();
-                    case 10 -> msg = showCard();
-                    case 11 -> msg = addCard();
-                    case 12 -> msg = moveCard();
-                    case 13 -> msg = getCardHistory();
-                    case 14 -> sendChatMessage();
-                    case 15 -> reciveChatMessages();
-                    case 16 -> msg = cancelProject();
-                    case 17 -> {
+                    case 2 -> listUsers();
+                    case 3 -> listOnlineUsers();
+                    case 4 -> msg = listProjects();
+                    case 5 -> msg = createProject();
+                    case 6 -> msg = addMember();
+                    case 7 -> msg = showMember();
+                    case 8 -> msg = showProjectCards();
+                    case 9 -> msg = showCard();
+                    case 10 -> msg = addCard();
+                    case 11 -> msg = moveCard();
+                    case 12 -> msg = getCardHistory();
+                    case 13 -> sendChatMessage();
+                    case 14 -> receiveChatMessages();
+                    case 15 -> msg = cancelProject();
+                    /*case 17 -> {
                         exit = true;
                         msg = closeConnection();
-                    }
+                    }*/
                     default -> {
                         System.out.println("\n@> Scelta non valida.\n");
                         //continue;
@@ -204,7 +202,7 @@ public class Client {
             for (ChatAddress ca : chatAddresses) {
                 ca.getMulticastSocket().close();
             }
-        } catch (IOException e) { // TODO: 03/05/21 se esco al primo menù sulleva di sicuro eccezioni 
+        } catch (IOException e) { // TODO: 03/05/21 se esco al primo menù solleva di sicuro eccezioni
             e.printStackTrace();
         }
         System.out.println("Esco dal programma.");
@@ -261,7 +259,6 @@ public class Client {
     private static ANSWER_CODE serverAnswer() {
         String message, read = "";
         boolean end = false;
-        // TODO: 26/01/21 Capire come gestire questo while
         try {
             while (!end && (message = readerIn.readLine()) != null) {
                 if (!message.contains(ServerSettings.MESSAGE_TERMINATION_CODE)) {
@@ -282,9 +279,9 @@ public class Client {
                 break;
             }
             case GET_PRJ_CHAT: {
-                if (answer.getAnswerCode().equals(ANSWER_CODE.OP_OK)) {
-                    if (answer.getExtra().equals("Utente non membro del progetto.")) { // TODO: 15/04/21 sarebbe carino metterlo come stringa predefinita
-                        System.out.println("\n@> " + answer.getExtra() + "\n");
+                if (answer.getAnswerCode().equals(ANSWER_CODE.OP_OK)) { // TODO: 06/05/21 se il progetto non esiste, ritorna null e crasha 
+                    if (answer.getExtra().equals(ANSWER_CODE.PERMISSION_DENIED.toString())) { // TODO: 15/04/21 sarebbe carino metterlo come stringa predefinita
+                        System.out.println("\n@> Utente non membro del progetto.\n");
                         return ANSWER_CODE.PERMISSION_DENIED;
                     } else {
                         try {
@@ -340,23 +337,23 @@ public class Client {
      */
     private static void printOperationMenu() {
         System.out.println("Scegli operazione:" +
-                "\n 1.  Login Utente," +
-                "\n 2.  Logout Utente," +
-                "\n 3.  Vedi Lista Utenti Registrati," +
-                "\n 4.  Vedi Lista Utenti Online," +
-                "\n 5.  Vedi Lista dei Progetti," +
-                "\n 6.  Crea un Progetto," +
-                "\n 7.  Aggiungi un Utente a un Progetto," +
-                "\n 8.  Vedi Membri del Progetto," +
-                "\n 9.  Vedi Cards del Progetto," +
-                "\n 10. Vedi Informazioni di una Card," +
-                "\n 11. Aggiungi una Card al progetto," +
-                "\n 12. Sposta una Card in un'altra Lista," +
-                "\n 13. Vedi la History della Card," +
-                "\n 14. Invia un Messaggio in una Chat," +
-                "\n 15. Leggi la Chat del Progetto," +
-                "\n 16. Cancella un Progetto," +
-                "\n 17. Esci.");
+                "\n -1.  Login Utente," +
+                "\n 1.  Logout Utente," +
+                "\n 2.  Vedi Lista Utenti Registrati," +
+                "\n 3.  Vedi Lista Utenti Online," +
+                "\n 4.  Vedi Lista dei Progetti," +
+                "\n 5.  Crea un Progetto," +
+                "\n 6.  Aggiungi un Utente a un Progetto," +
+                "\n 7.  Vedi Membri del Progetto," +
+                "\n 8.  Vedi Cards del Progetto," +
+                "\n 9. Vedi Informazioni di una Card," +
+                "\n 10. Aggiungi una Card al progetto," +
+                "\n 11. Sposta una Card in un'altra Lista," +
+                "\n 12. Vedi la History della Card," +
+                "\n 13. Invia un Messaggio in una Chat," +
+                "\n 14. Leggi la Chat del Progetto," +
+                "\n 15. Cancella un Progetto," +
+                "\n -1. Esci."); // TODO: 06/05/21 levare esci
     }
 
     //------ POSSIBILI OPERAZIONI RICHIESTE ------
@@ -375,7 +372,7 @@ public class Client {
         ANSWER_CODE answer_code = ANSWER_CODE.OP_FAIL;
         try {
             answer_code = serverObj.register(nickname, password);
-            System.err.println("Ricevuto " + answer_code);
+            System.out.println("\n@> "+ answer_code);
         } catch (RemoteException e) {
             e.printStackTrace();
         }
@@ -406,7 +403,6 @@ public class Client {
     }
 
 
-    // TODO: 20/04/21 rendere questo un metodo locale in base a una struttura locale
     private static void listUsers() {
         synchronized (userStatus) {
             System.out.println("\n@> Utenti: " + userStatus);
@@ -415,7 +411,6 @@ public class Client {
         //return new Message(nickname, null, OP_CODE.LIST_USER, null, null, null);
     }
 
-    // TODO: 20/04/21 rendere questo un metodo locale in base a una struttura locale
     private static void listOnlineUsers() {
         String online = "\n@> Utenti Online:\n";
         synchronized (userStatus) {
@@ -614,9 +609,9 @@ public class Client {
      * EFFECTS: se l'indirizzo della chat del progetto è già in memoria leggo la chat dalla memoria locale,
      *          altrimenti richiedo l'indirizzo della chat e ricevo anche i messaggi dal server.
      */
-    private static void reciveChatMessages() {
+    private static void receiveChatMessages() {
         String projectTitle, message;
-        ANSWER_CODE response;
+        ANSWER_CODE response = ANSWER_CODE.OP_OK;
         ChatAddress chatAddress;
         byte[] data;
         DatagramPacket dp;
@@ -625,12 +620,15 @@ public class Client {
         System.out.print("Titolo del Progetto: ");
         projectTitle = scanner.next();
 
+        // TODO: 06/05/21 stampa la risposta un sacco di volte
         //se non sono iscritto alla chat mi iscrivo
         chatAddress = getProjectChatAddress(projectTitle);
         if (chatAddress == null) { //Caso in cui non abbia i riferimenti del progetto in memoria
-            requestProjectChat(projectTitle);
+            response = requestProjectChat(projectTitle);
         }
-        System.out.println(findProjectChat(projectTitle).getMessages());
+        if(response == ANSWER_CODE.OP_OK){ //Se ho ricevuto la chat del progetto
+            System.out.println(findProjectChat(projectTitle).getMessages());
+        }
     }
 
     // --------- OPERAZIONI PER LA CHAT ---------
