@@ -30,7 +30,7 @@ public class Server {
 
     //---------- MAIN ---------
     public static void main(String[] args) {
-        SocketList socketList; //Lista dei descrittori delle connessioni dei client
+        final SocketList socketList; //Lista dei descrittori delle connessioni dei client
         ThreadPoolExecutor pool; //pool di thread per gestire le richieste dei client
         Thread leader; //Thread per la gestione delle connessioni pronte a scrivere
 
@@ -45,7 +45,8 @@ public class Server {
         socketList = SocketList.getSingletonInstance();
         pool = new ThreadPoolExecutor(ServerSettings.MIN_THREAD_NUMBER, ServerSettings.MAX_THREAD_NUMBER, ServerSettings.THREAD_KEEP_ALIVE_TIME, TimeUnit.SECONDS, new LinkedBlockingQueue<>());
 
-        //Crea la directory in cui salvo i progetti e, se esistono, leggo i file di backup
+        //Crea la directory in cui salvo i backup se non esiste
+        // TODO: 12/05/21 spostare questo in readServerBackup()? 
         Path path = Paths.get(serverBackupDirPath);
         try {
             Files.createDirectories(path);
@@ -64,10 +65,9 @@ public class Server {
         //Apre la connessione
         try {
             serverSocket = new ServerSocket();
-            // TODO: 30/04/21 spostare l'indirizzo in ServerSetting
             serverSocket.bind(new InetSocketAddress(InetAddress.getLocalHost(), ServerSettings.SERVER_PORT));
             System.out.println("Aperta la connessione @ " + InetAddress.getLocalHost() + ":" + ServerSettings.SERVER_PORT);
-        } catch (UnknownHostException e) { // TODO: 24/01/21 sistemare return
+        } catch (UnknownHostException e) {
             e.printStackTrace();
             return;
         } catch (IOException e) {
@@ -111,7 +111,12 @@ public class Server {
                 }
 
                 //invio in un segnale di interruzione al leader
-                leader.interrupt(); // TODO: 05/05/21 serve fare una join? devo aspettare qualcosa?
+                leader.interrupt();
+                try {
+                    leader.join();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
                 //chiudo il socket
                 try {
                     serverSocket.close();
@@ -123,7 +128,7 @@ public class Server {
 
 
         //Ciclo principale
-        while (true) { // TODO: 09/04/21 implementare qualcosa che riconosca il messaggio di stop
+        while (true) {
             //Aspetta una connessione
             Socket client;
             try {

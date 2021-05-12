@@ -15,7 +15,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 
 
 public class Leader extends Thread {
-    private SocketList socketList;
+    private final SocketList socketList;
     private ThreadPoolExecutor pool;
     private int countOperation = 0;
     private boolean exit = false;
@@ -29,8 +29,9 @@ public class Leader extends Thread {
     @Override
     public void run() {
         while (!exit) {
-            if(isInterrupted()) { //controlla se è stato inviato un segnale di interruzione
+            if(isInterrupted()) { //controlla se è stato inviato un segnale di interruzione e nel caso fa pulizia prima di chiudere
                 System.out.println("Leader: ricevuto segnale di interruzione");
+                socketList.clean();
                 exit = true;
             }
             //Valuto, in base ai thread attivi e al numero di op. dall'ultimo salvataggio, se sia necessario fare un backup e se è un buon momento
@@ -61,7 +62,6 @@ public class Leader extends Thread {
                             connection.close();
                             iterator.remove();
                         }
-                        // TODO: 26/01/21 aggiungere caso connessione chiusa
                     }
                     catch (IOException e) {
                         e.printStackTrace();

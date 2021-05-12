@@ -97,7 +97,6 @@ public class Project implements Serializable {
      * REQUIRES: @params != null && userNickname appartiene al progetto
      * RETURN: restituisce la card con titolo = cardTitle, null altrimenti
      */
-    // TODO: 14/01/21 passare una copia? una stringa? in realtà è usata in sola lettura
     public Card getCard(String cardTitle, String cardStatus, String userNickname) {
         Card card = null;
         if (isUserRegisteredToProject(userNickname)) {
@@ -340,7 +339,6 @@ public class Project implements Serializable {
                 card = crd;
             }
         }
-        //TODO se si blocca qui e un altro thread la sposta???? in realtà mi basta trovarla, se viene spostata lo leggo anche dopo
         return card;
     }
 
@@ -372,7 +370,7 @@ public class Project implements Serializable {
      * EFFECTS: legge tutti i messaggi inviati sulla chat del progetto dall'ultima invocazione di questo metodo
      *          e li salva in memoria
      */
-    private void reciveAllMessagge() {
+    private void reciveAllMessagge() { // TODO: 11/05/21 capire dove e quando chiamarla
         boolean done = false;
         byte[] data = new byte[1024];
         DatagramPacket dp = new DatagramPacket(data, data.length);

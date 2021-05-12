@@ -116,9 +116,11 @@ public class ProjectsList  {
      * EFFECTS: aggiunge il progetto alla lista se questo non è esistente ( Nota. tutti i controlli sono fatti dal chiamante )
      */
     public void add(String projectTitle, String userNickname) {
-        lock.writeLock().lock(); // TODO: 03/05/21 Serve questa lock? se aggiungo due progetti in contemporanea 
+        //setto il nuovo indirizzo per la chat
+        lock.writeLock().lock();
         String suffix = (++lastUsedIP).toString();
         String address = multicastIpPrefix + suffix;
+        lastUsedPort--;
         lock.writeLock().unlock();
         
         if(lastUsedIP < 0 || lastUsedIP > 255){ //indirizzi da 239.0.0.0 a 239.0.0.255
@@ -126,10 +128,10 @@ public class ProjectsList  {
             return;
         }
 
-        System.out.println("Indirizzo chat del progetto"+projectTitle+":"+address+":"+(lastUsedPort-1));
+        System.out.println("Indirizzo chat del progetto"+projectTitle+":"+address+":"+(lastUsedPort));
         lock.writeLock().lock();
         try {
-            projectsList.add(new Project(projectTitle,userNickname,address,--lastUsedPort));
+            projectsList.add(new Project(projectTitle,userNickname,address,lastUsedPort));
         } finally {
             lock.writeLock().unlock();
         }

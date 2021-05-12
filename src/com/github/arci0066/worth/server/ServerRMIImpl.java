@@ -27,10 +27,7 @@ public class ServerRMIImpl extends RemoteServer implements ServerRMI {
             System.out.println("Nuovo client registrato per la callback.");
 
             // TODO: 12/04/21 capire se va bene così, funziona
-            String registeredUserList;
-            synchronized (usersList) { //TODO capire se serve sincronizzare
-                registeredUserList = usersList.jsonString(); // TODO: 09/04/21 Meglio così o json?
-            }
+            String registeredUserList = usersList.jsonString(); // TODO: 09/04/21 Meglio così o json?
             update(registeredUserList);
         }
     }
@@ -50,7 +47,6 @@ public class ServerRMIImpl extends RemoteServer implements ServerRMI {
     /* notifica di una variazione di valore dell'azione
 /* quando viene richiamato, fa il callback a tutti i client
 registrati */
-    // TODO: 05/05/21 dovrebbe essere chiamata anche in caso di logout per notificare
     public void update(String value) throws RemoteException {
         doCallbacks(value);
     }

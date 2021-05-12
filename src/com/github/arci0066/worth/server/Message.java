@@ -12,13 +12,13 @@ public class Message{
     private String extra;
 
     //------------ Constructors -------------
-    public Message(String senderNickname, String extra, OP_CODE operationCode, String projectTitle, String cardTitle, ANSWER_CODE answer) {
+    public Message(String senderNickname, String extra, OP_CODE operationCode, String projectTitle, String cardTitle) {
         this.senderNickname = senderNickname;
         this.operationCode = operationCode;
         this.projectTitle = projectTitle;
         this.cardTitle = cardTitle;
         this.extra = extra;
-        this.answerCode = answer;
+        this.answerCode = null;
     }
 
     // ------ Getters -------

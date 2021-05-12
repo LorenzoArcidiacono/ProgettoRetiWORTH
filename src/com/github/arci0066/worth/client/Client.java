@@ -239,8 +239,8 @@ public class Client {
      */
     private static void sendMessage(Message msg) {
         if (msg == null) {
+            System.err.println("Messaggio non inviato: msg == null");
             return;
-            // TODO: 22/04/21 sollevare eccezione
         }
         try {
             writerOut.write(gson.toJson(msg) + "\n");
@@ -279,8 +279,8 @@ public class Client {
                 break;
             }
             case GET_PRJ_CHAT: {
-                if (answer.getAnswerCode().equals(ANSWER_CODE.OP_OK)) { // TODO: 06/05/21 se il progetto non esiste, ritorna null e crasha 
-                    if (answer.getExtra().equals(ANSWER_CODE.PERMISSION_DENIED.toString())) { // TODO: 15/04/21 sarebbe carino metterlo come stringa predefinita
+                if (answer.getAnswerCode().equals(ANSWER_CODE.OP_OK)) {
+                    if (answer.getExtra().equals(ANSWER_CODE.PERMISSION_DENIED.toString())) {
                         System.out.println("\n@> Utente non membro del progetto.\n");
                         return ANSWER_CODE.PERMISSION_DENIED;
                     } else {
@@ -390,7 +390,7 @@ public class Client {
         System.out.print("Password:");
         password = scanner.next();
 
-        return new Message(nickname, password, OP_CODE.LOGIN, null, null, null);
+        return new Message(nickname, password, OP_CODE.LOGIN, null, null);
     }
 
     /*
@@ -399,7 +399,7 @@ public class Client {
      */
 
     private static Message logout() {
-        return new Message(nickname, null, OP_CODE.LOGOUT, null, null, null);
+        return new Message(nickname, null, OP_CODE.LOGOUT, null, null);
     }
 
 
@@ -430,7 +430,7 @@ public class Client {
      * RETURN: il messaggio
      */
     private static Message listProjects() {
-        return new Message(nickname, null, OP_CODE.LIST_PROJECTS, null, null, null);
+        return new Message(nickname, null, OP_CODE.LIST_PROJECTS, null, null);
     }
 
     /*
@@ -447,7 +447,7 @@ public class Client {
             System.err.println("Errore di titolo.");
             return null;
         }
-        return new Message(nickname, null, OP_CODE.CREATE_PROJECT, projectTitle, null, null);
+        return new Message(nickname, null, OP_CODE.CREATE_PROJECT, projectTitle, null);
     }
 
     /*
@@ -460,7 +460,7 @@ public class Client {
         projectTitle = scanner.next();
         System.out.print("Inserire il nome dell' utente da aggiungere al progetto:");
         user = scanner.next();
-        return new Message(nickname, user, OP_CODE.ADD_MEMBER, projectTitle, null, null);
+        return new Message(nickname, user, OP_CODE.ADD_MEMBER, projectTitle, null);
     }
 
     /*
@@ -471,7 +471,7 @@ public class Client {
         String projectTitle;
         System.out.print("Inserire il Titolo del Progetto:");
         projectTitle = scanner.next();
-        return new Message(nickname, null, OP_CODE.SHOW_MEMBERS, projectTitle, null, null);
+        return new Message(nickname, null, OP_CODE.SHOW_MEMBERS, projectTitle, null);
     }
 
     /*
@@ -482,7 +482,7 @@ public class Client {
         String projectTitle;
         System.out.print("Inserire il Titolo del Progetto:");
         projectTitle = scanner.next();
-        return new Message(nickname, null, OP_CODE.SHOW_PROJECT_CARDS, projectTitle, null, null);
+        return new Message(nickname, null, OP_CODE.SHOW_PROJECT_CARDS, projectTitle, null);
     }
 
     /*
@@ -497,7 +497,7 @@ public class Client {
         card = scanner.next();
         System.out.print("Inserire lista in cui si trova [todo, inprogress, toberevised, done]:"); // TODO: 25/01/21 Migliorare scelta lista!
         extra = scanner.next();
-        return new Message(nickname, extra, OP_CODE.SHOW_CARD, projectTitle, card, null);
+        return new Message(nickname, extra, OP_CODE.SHOW_CARD, projectTitle, card);
     }
 
     /*
@@ -519,7 +519,7 @@ public class Client {
             System.err.println("Errore nel titolo o nella descrizione.");
             return null;
         }
-        return new Message(nickname, desc, OP_CODE.ADD_CARD, projectTitle, card, null);
+        return new Message(nickname, desc, OP_CODE.ADD_CARD, projectTitle, card);
     }
 
     /*
@@ -537,7 +537,7 @@ public class Client {
         extra += "->";
         System.out.print("Titolo lista di destinazione [inprogress, toberevised, done]:");
         extra += scanner.next();
-        return new Message(nickname, extra, OP_CODE.MOVE_CARD, projectTitle, card, null);
+        return new Message(nickname, extra, OP_CODE.MOVE_CARD, projectTitle, card);
     }
 
     /*
@@ -552,7 +552,7 @@ public class Client {
         card = scanner.next();
         System.out.print("In che lista si trova [todo, inprogress, toberevised, done]:");
         list = scanner.next();
-        return new Message(nickname, list, OP_CODE.GET_CARD_HISTORY, projectTitle, card, null);
+        return new Message(nickname, list, OP_CODE.GET_CARD_HISTORY, projectTitle, card);
     }
 
     /*
@@ -563,7 +563,7 @@ public class Client {
         String projectTitle;
         System.out.print("Inserire il Titolo del Progetto:");
         projectTitle = scanner.next();
-        return new Message(nickname, null, OP_CODE.CANCEL_PROJECT, projectTitle, null, null);
+        return new Message(nickname, null, OP_CODE.CANCEL_PROJECT, projectTitle, null);
     }
 
     /*
@@ -700,8 +700,8 @@ public class Client {
      */
     private static ChatMessages findProjectChat(String projectTitle) {
         if (projectTitle == null) {
+            System.err.println("findProjectChat() : projectTitle == null");
             return null;
-            // TODO: 22/04/21 sollevare eccezione
         }
         for (ChatMessages cm : chatMessages) {
             if (cm.getProjectTitle().equals(projectTitle))
@@ -717,8 +717,8 @@ public class Client {
      */
     private static ChatAddress getProjectChatAddress(String projectTitle) {
         if (projectTitle == null) {
+            System.err.println("getProjectChatAddress() : projectTitle == null");
             return null;
-            // TODO: 22/04/21 sollevare eccezione
         }
         for (ChatAddress ca : chatAddresses) {
             if (ca.getProjectTitle().equals(projectTitle))
@@ -735,15 +735,15 @@ public class Client {
      */
     private static ANSWER_CODE requestProjectChat(String projectTitle) {
         if (projectTitle == null) {
+            System.err.println("requestProjectChat() : projectTitle == null");
             return ANSWER_CODE.OP_FAIL;
-            // TODO: 22/04/21 sollevare eccezione
         }
         ANSWER_CODE response;
-        Message request = new Message(nickname, null, OP_CODE.GET_PRJ_CHAT, projectTitle, null, null);
+        Message request = new Message(nickname, null, OP_CODE.GET_PRJ_CHAT, projectTitle, null);
         sendMessage(request);
         response = serverAnswer();
         if (response == ANSWER_CODE.OP_OK) { //se l'iscrizione è andata a buon fine chiedo i messaggi precedenti
-            request = new Message(nickname, null, OP_CODE.GET_CHAT_HST, projectTitle, null, null);
+            request = new Message(nickname, null, OP_CODE.GET_CHAT_HST, projectTitle, null);
             sendMessage(request);
             return serverAnswer();
         }
@@ -753,14 +753,12 @@ public class Client {
 
     // ------- CHIUSURA ------
 
-    // TODO: 26/01/21 Chiusura in caso di errore
-
     /*
      * EFFECTS: setta un messaggio per chiudere la connessione col server.
      * RETURN: il messaggio
      */
     private static Message closeConnection() {
-        return new Message(nickname, null, OP_CODE.CLOSE_CONNECTION, null, null, null);
+        return new Message(nickname, null, OP_CODE.CLOSE_CONNECTION, null, null);
     }
 
 }

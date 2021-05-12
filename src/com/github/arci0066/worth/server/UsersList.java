@@ -155,9 +155,16 @@ public class UsersList {
                 .excludeFieldsWithoutExposeAnnotation()
                 .create();
         List<String> usersStatus = new ArrayList<>();
-        for (User u: usersList) {
-            usersStatus.add(u.getNickname()+" : "+u.getUserStatus());
+        lock.readLock().lock();
+        try{
+            for (User u: usersList) {
+                usersStatus.add(u.getNickname()+" : "+u.getUserStatus());
+            }
         }
+        finally {
+            lock.readLock().unlock();
+        }
+
         return gson.toJson(usersStatus);
     }
 }

@@ -41,12 +41,18 @@ public class Task extends Thread {
             e.printStackTrace();
             return;
         }
-        if (message == null) { //in caso di errore di lettura ritorna
+        if (message == null ) { //in caso di errore di lettura ritorna
             System.err.println("Errore ricezione messaggio.");
             return;
         }
 
-        if(!findUserByNickname(message.getSenderNickname()).isOnline() && !message.getOperationCode().equals(OP_CODE.LOGIN)){ //in caso il mittente risulti offline
+        User user = findUserByNickname(message.getSenderNickname());
+        if(user == null){
+            System.err.println("Task: Utente inesistente");
+            return;
+        }
+
+        if(!user.isOnline() && !message.getOperationCode().equals(OP_CODE.LOGIN)){ //in caso il mittente risulti offline
             message.setAnswer(ANSWER_CODE.USER_OFFLINE,null);
             try {
                 sendAnswer();
@@ -124,10 +130,12 @@ public class Task extends Thread {
             }
             case GET_PRJ_CHAT: {
                 string = getProjectChat(message.getProjectTitle(), message.getSenderNickname());
+                if(string == null) answer_code = ANSWER_CODE.OP_FAIL;
                 break;
             }
             case GET_CHAT_HST: {
                 string = getChatHistory(message.getProjectTitle(), message.getSenderNickname());
+                if(string == null) answer_code = ANSWER_CODE.OP_FAIL;
                 break;
             }
             /*case CLOSE_CONNECTION: {
