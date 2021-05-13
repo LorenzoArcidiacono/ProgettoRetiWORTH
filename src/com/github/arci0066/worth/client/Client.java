@@ -33,7 +33,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 
 public class Client {
-    
+
     // -------- DATI UTENTE ---------
     private static String password;
     private static String nickname;
@@ -64,7 +64,7 @@ public class Client {
     private static Scanner scanner;    //Per leggere le richieste da tastiera o da file di input
     static Thread daemon;
 
-    public static void main(String[] args) {
+    public static void main(String[] args) { // TODO: 13/05/21 impostare un thread che anche in caso di chiusura inaspettata chiuda la connessione per evitare errori nel server
 
         if (args.length > 0) {
             try { // se è specificato un file usa quello come input del client
@@ -270,9 +270,9 @@ public class Client {
             e.printStackTrace();
         }
         Message answer = gson.fromJson(read, Message.class);
-        System.out.println("\n@> " + answer.getAnswerCode() + "\n");
         switch (answer.getOperationCode()) {
             case LIST_USER, LIST_ONLINE_USER, LIST_PROJECTS, SHOW_CARD, SHOW_MEMBERS, SHOW_PROJECT_CARDS, GET_CARD_HISTORY: {
+                System.out.println("\n@> " + answer.getAnswerCode() + "\n");
                 if (answer.getAnswerCode().equals(ANSWER_CODE.OP_OK)) {
                     System.out.println("\n@> " + answer.getExtra() + "\n");
                 }
@@ -358,7 +358,6 @@ public class Client {
 
     //------ POSSIBILI OPERAZIONI RICHIESTE ------
 
-    // TODO: 27/01/21 cambiare ritorno
 
     /*
      * EFFECTS: Tramite RMI registra l' utente al server
@@ -372,7 +371,7 @@ public class Client {
         ANSWER_CODE answer_code = ANSWER_CODE.OP_FAIL;
         try {
             answer_code = serverObj.register(nickname, password);
-            System.out.println("\n@> "+ answer_code);
+            System.out.println("\n@> " + answer_code);
         } catch (RemoteException e) {
             e.printStackTrace();
         }
@@ -587,7 +586,6 @@ public class Client {
         chatAddress = getProjectChatAddress(projectTitle);
         if (chatAddress == null) { //Caso in cui non abbia i riferimenti del progetto in memoria
             response = requestProjectChat(projectTitle);
-            // TODO: 15/04/21 in realtà in ogni caso ritorna op_ok... dovrei cambiare questa cosa
             if (response != ANSWER_CODE.OP_OK) {
                 System.err.println("@> " + response + " Messaggio non inviato.");
                 return;
@@ -626,7 +624,7 @@ public class Client {
         if (chatAddress == null) { //Caso in cui non abbia i riferimenti del progetto in memoria
             response = requestProjectChat(projectTitle);
         }
-        if(response == ANSWER_CODE.OP_OK){ //Se ho ricevuto la chat del progetto
+        if (response == ANSWER_CODE.OP_OK) { //Se ho ricevuto la chat del progetto
             System.out.println(findProjectChat(projectTitle).getMessages());
         }
     }
@@ -655,7 +653,7 @@ public class Client {
 
                 while (true) {
                     if (chatAddresses.isEmpty()) {
-                        try {
+                        try { // TODO: 13/05/21 impostare una signal?
                             Thread.sleep(1000);
                             continue;
                         } catch (InterruptedException e) { //Caso in cui venga interrotto durante la sleep

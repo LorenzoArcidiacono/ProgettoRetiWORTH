@@ -23,9 +23,6 @@ public class Project implements Serializable {
     @Serial
     private static final long serialVersionUID = 1;
 
-    // TODO: 22/04/21 fa schifo
-    private static final String UTENTE_ERRATO = "Utente non membro del progetto.";
-
     private String projectTitle;
     private List<Card> todoList, inProgressList, toBeRevisedList, doneList;
     private List<String> projectUsers; //Lista dei membri del progetto
@@ -90,7 +87,7 @@ public class Project implements Serializable {
             }
             return str;
         }
-        return UTENTE_ERRATO;
+        return ANSWER_CODE.PERMISSION_DENIED.toString();
     }
 
     /*
@@ -223,6 +220,7 @@ public class Project implements Serializable {
      *			|| OP_FAIL altrimenti.
      */
     public ANSWER_CODE addUser(String oldUserNickname, String newUserNickname) {
+        // TODO: 13/05/21 potrei mettere qui il reciveMessagge(), se aggiungo un utente è probabile che voglia leggere la chat
         if (!isUserRegisteredToProject(oldUserNickname))
             return ANSWER_CODE.PERMISSION_DENIED;
 
@@ -281,7 +279,7 @@ public class Project implements Serializable {
      *          || PERMISSION_DENIED altrimenti
      */
     public String showCards(String userNickname) {
-
+        // TODO: 13/05/21 potrei mettere qui il reciveMessagge(), se vedo le card magari voglio chiedere informazioni
         String answer;
         if (isUserRegisteredToProject(userNickname)) {
             lock.readLock().lock();

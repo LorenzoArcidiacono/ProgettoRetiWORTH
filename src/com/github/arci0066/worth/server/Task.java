@@ -41,19 +41,19 @@ public class Task extends Thread {
             e.printStackTrace();
             return;
         }
-        if (message == null ) { //in caso di errore di lettura ritorna
+        if (message == null) { //in caso di errore di lettura ritorna
             System.err.println("Errore ricezione messaggio.");
             return;
         }
 
         User user = findUserByNickname(message.getSenderNickname());
-        if(user == null){
+        if (user == null) {
             System.err.println("Task: Utente inesistente");
             return;
         }
 
-        if(!user.isOnline() && !message.getOperationCode().equals(OP_CODE.LOGIN)){ //in caso il mittente risulti offline
-            message.setAnswer(ANSWER_CODE.USER_OFFLINE,null);
+        if (!user.isOnline() && !message.getOperationCode().equals(OP_CODE.LOGIN)) { //in caso il mittente risulti offline
+            message.setAnswer(ANSWER_CODE.USER_OFFLINE, null);
             try {
                 sendAnswer();
             } catch (IOException e) {
@@ -61,15 +61,18 @@ public class Task extends Thread {
             }
         }
         System.out.println("Messaggio ricevuto: " + message);
+
         ANSWER_CODE answer_code = ANSWER_CODE.OP_OK;
         String string = message.getExtra();
+        Message answer = null;
+
         switch (message.getOperationCode()) {
             case LOGIN: {
-                answer_code = login(message.getSenderNickname(), message.getExtra());
+                message = login(message);
                 break;
             }
             case LOGOUT: {
-                answer_code = logout(message.getSenderNickname());
+                logout(message.getSenderNickname());
                 try {
                     connection.close();
                 } catch (IOException e) {
@@ -86,56 +89,51 @@ public class Task extends Thread {
                 break;
             }*/
             case LIST_PROJECTS: {
-                string = listProjects();
+                message = listProjects(message);
                 break;
             }
             case CREATE_PROJECT: {
-                answer_code = createProject(message.getProjectTitle(), message.getSenderNickname());
+                message = createProject(message);
                 break;
             }
             case ADD_MEMBER: {
-                answer_code = addMember(message.getProjectTitle(), message.getSenderNickname(), message.getExtra());
+                message = addMember(message);
                 break;
             }
             case ADD_CARD: {
-                answer_code = addCard(message.getProjectTitle(), message.getCardTitle(), message.getExtra(), message.getSenderNickname());
+                message = addCard(message);
                 break;
             }
             case MOVE_CARD: {
-                answer_code = moveCard(message.getProjectTitle(), message.getCardTitle(), message.getExtra(), message.getSenderNickname());
+                message = moveCard(message);
                 break;
             }
             case SHOW_CARD: {
-                string = showCard(message.getProjectTitle(), message.getCardTitle(), message.getExtra(), message.getSenderNickname());
-                if (string == null) {
-                    answer_code = ANSWER_CODE.OP_FAIL;
-                }
+                message = showCard(message);
                 break;
             }
             case SHOW_MEMBERS: {
-                string = showMembers(message.getProjectTitle(), message.getSenderNickname());
+                message = showMembers(message);
                 break;
             }
             case GET_CARD_HISTORY: {
-                string = getCardHistory(message.getProjectTitle(), message.getCardTitle(), message.getExtra(), message.getSenderNickname());
+                message = getCardHistory(message);
                 break;
             }
             case SHOW_PROJECT_CARDS: {
-                string = showCards(message.getProjectTitle(), message.getSenderNickname());
+                message = showCards(message);
                 break;
             }
             case CANCEL_PROJECT: {
-                answer_code = cancelProject(message.getProjectTitle(), message.getSenderNickname());
+                message = cancelProject(message);
                 break;
             }
             case GET_PRJ_CHAT: {
-                string = getProjectChat(message.getProjectTitle(), message.getSenderNickname());
-                if(string == null) answer_code = ANSWER_CODE.OP_FAIL;
+                message = getProjectChat(message);
                 break;
             }
             case GET_CHAT_HST: {
-                string = getChatHistory(message.getProjectTitle(), message.getSenderNickname());
-                if(string == null) answer_code = ANSWER_CODE.OP_FAIL;
+                message = getChatHistory(message);
                 break;
             }
             /*case CLOSE_CONNECTION: {
@@ -147,15 +145,13 @@ public class Task extends Thread {
                 }
             }*/
             default: {
-                answer_code = ANSWER_CODE.OP_FAIL;
-                string = null;
+                message.setAnswer(ANSWER_CODE.OP_FAIL,null);
             }
         }
         // se l'operazione richiede una risposta la invia
-        // TODO: 22/04/21 in caso di extra restituisce sempre op_ok... dovrei cambiare e il metodo restituisce il messaggio
         if (message.getOperationCode() != OP_CODE.CLOSE_CONNECTION && message.getOperationCode() != OP_CODE.LOGOUT) {
             try {
-                message.setAnswer(answer_code, string);
+                //message.setAnswer(answer_code, string);
                 sendAnswer();
             } catch (IOException | NullPointerException e) {
                 e.printStackTrace();
@@ -205,41 +201,46 @@ public class Task extends Thread {
      *			|| WRONG_PASSWORD se la password è sbagliata
      *			|| OP_FAIL in caso di errore
      */
-    public ANSWER_CODE login(String userNickname, String userPassword) {
+    public Message login(Message msg) {
+        String userNickname = msg.getSenderNickname();
+        String userPassword = msg.getExtra();
+
         if (isNull(userNickname, userPassword)) {
-            return ANSWER_CODE.OP_FAIL;
+            msg.setAnswer(ANSWER_CODE.OP_FAIL, null);
+            return msg;
         }
         //Cerco l'utente
         User usr = findUserByNickname(userNickname);
         if (usr == null) {
-            return ANSWER_CODE.UNKNOWN_USER;
+            msg.setAnswer(ANSWER_CODE.UNKNOWN_USER, null);
+            return msg;
         }
         //Controllo che le credenziali siano corrette e nel caso lo setto Online
         if (usr.checkCredential(userNickname, userPassword)) {
             usr.login();
-            return ANSWER_CODE.OP_OK;
+            msg.setAnswer(ANSWER_CODE.OP_OK, null);
+            return msg;
         }
-        return ANSWER_CODE.WRONG_PASSWORD;
+        msg.setAnswer(ANSWER_CODE.WRONG_PASSWORD, null);
+        return msg;
     }
 
     /*
      * REQUIRES: String != null
      * EFFECTS: Se il nickname è registrato e online viene settato com offline,
      */
-    public ANSWER_CODE logout(String userNickname) {
+    public void logout(String userNickname) {
         if (isNull(userNickname)) {
-            return ANSWER_CODE.OP_FAIL;
+            return;
         }
         //Cerco l'utente
         User usr = findUserByNickname(userNickname);
         if (usr == null) {
-            return ANSWER_CODE.UNKNOWN_USER;
+            return;
         }
         if (usr.isOnline()) {
             usr.logout();
         }
-        //Se non era online non faccio nulla.
-        return ANSWER_CODE.OP_OK;
     }
 
     /*
@@ -268,8 +269,11 @@ public class Task extends Thread {
      * RETURN: Una stringa contenente i nomi dei progetti
      */
     //Meglio se restituisse una List?
-    public String listProjects() {
-        return projectsList.getProjectsTitle();
+    public Message listProjects(Message msg) {
+        String answer = projectsList.getProjectsTitle();
+        System.err.println(answer);
+        msg.setAnswer(ANSWER_CODE.OP_OK, answer);
+        return msg;
     }
 
     /*
@@ -282,19 +286,26 @@ public class Task extends Thread {
      *			|| EXISTING_PROJECT se il titolo è già in uso.
      *			|| OP_FAIL altrimenti.
      */
-    public ANSWER_CODE createProject(String projectTitle, String userNickname) {
+    public Message createProject(Message msg) {
+        String projectTitle = msg.getProjectTitle();
+        String userNickname = msg.getSenderNickname();
+
         //Controllo Parametri
         if (isNull(projectTitle, userNickname)) {
-            return ANSWER_CODE.OP_FAIL;
+            msg.setAnswer(ANSWER_CODE.OP_FAIL, null);
+            return msg;
         }
         if (findUserByNickname(userNickname) == null) {
-            return ANSWER_CODE.UNKNOWN_USER;
+            msg.setAnswer(ANSWER_CODE.UNKNOWN_USER, null);
+            return msg;
         }
         if (findProjectByTitle(projectTitle) == null) {
             projectsList.add(projectTitle, userNickname);
-            return ANSWER_CODE.OP_OK;
+            msg.setAnswer(ANSWER_CODE.OP_OK, null);
+            return msg;
         }
-        return ANSWER_CODE.EXISTING_PROJECT;
+        msg.setAnswer(ANSWER_CODE.EXISTING_PROJECT, null);
+        return msg;
     }
 
     /*
@@ -306,19 +317,26 @@ public class Task extends Thread {
      *          || PERMISSION_DENIED se l'utente oldUserNickname non è registrato al progetto
      *			|| OP_FAIL altrimenti.
      */
-    public ANSWER_CODE addMember(String projectTitle, String oldUserNickname, String newUserNickname) {
+    public Message addMember(Message msg) {
+        String projectTitle = msg.getProjectTitle();
+        String oldUserNickname = msg.getSenderNickname();
+        String newUserNickname = msg.getExtra();
         if (isNull(projectTitle, oldUserNickname, newUserNickname)) {
-            return ANSWER_CODE.OP_FAIL;
+            msg.setAnswer(ANSWER_CODE.OP_FAIL, null);
+            return msg;
         }
         if (findUserByNickname(newUserNickname) == null || findUserByNickname(oldUserNickname) == null) {
-            return ANSWER_CODE.UNKNOWN_USER;
+            msg.setAnswer(ANSWER_CODE.UNKNOWN_USER, null);
+            return msg;
         }
 
         Project prj = findProjectByTitle(projectTitle);
         if (prj == null) {
-            return ANSWER_CODE.UNKNOWN_PROJECT;
+            msg.setAnswer(ANSWER_CODE.UNKNOWN_PROJECT, null);
+            return msg;
         }
-        return prj.addUser(oldUserNickname, newUserNickname);
+        msg.setAnswer(prj.addUser(oldUserNickname, newUserNickname), null);
+        return msg;
     }
 
     /*
@@ -327,21 +345,26 @@ public class Task extends Thread {
      * RETURN: Una stringa contenente i nickname degli utenti registrati
      */
     //Meglio se restituisse una List?
-    public String showMembers(String projectTitle, String userNickname) {
+    public Message showMembers(Message msg) {
+        String projectTitle = msg.getProjectTitle();
+        String userNickname = msg.getSenderNickname();
         if (isNull(projectTitle, userNickname)) {
-            return "Errore nella richiesta.";
+            msg.setAnswer(ANSWER_CODE.OP_FAIL, null);
+            return msg;
         }
         if (findUserByNickname(userNickname) == null) {
-            return "L'utente non è registrato";
+            msg.setAnswer(ANSWER_CODE.UNKNOWN_USER, null);
+            return msg;
         }
 
-        //findProjectByTitle è thread safe
         Project prj = findProjectByTitle(projectTitle);
         if (prj == null) {
-            return "Progetto inesistente.";
+            msg.setAnswer(ANSWER_CODE.UNKNOWN_PROJECT, null);
+            return msg;
         }
-        //se si bloccasse qui e qualcuno aggiungesse un User? devo bloccare il progetto?  è solo una copia?
-        return prj.getProjectUsers(userNickname);
+        //todo se si bloccasse qui e qualcuno aggiungesse un User? devo bloccare il progetto?  è solo una copia?
+        msg.setAnswer(ANSWER_CODE.OP_OK, prj.getProjectUsers(userNickname));
+        return msg;
     }
 
     /*
@@ -349,20 +372,26 @@ public class Task extends Thread {
      * EFFECTS: Restituisce la lista delle com.github.arci0066.worth.extra.Card del progetto
      * RETURN: Una stringa contenente i titoli delle card divisi per status
      */
-    public String showCards(String projectTitle, String userNickname) {
+    public Message showCards(Message msg) {
+        String projectTitle = msg.getProjectTitle();
+        String userNickname = msg.getSenderNickname();
         if (isNull(projectTitle, userNickname)) {
-            return "Errore nella richiesta.";
+            msg.setAnswer(ANSWER_CODE.OP_FAIL, null);
+            return msg;
         }
         if (findUserByNickname(userNickname) == null) {
-            return "L'utente non è registrato";
+            msg.setAnswer(ANSWER_CODE.UNKNOWN_USER, null);
+            return msg;
         }
 
         Project prj = findProjectByTitle(projectTitle);
         if (prj == null) {
-            return "Progetto inesistente.";
+            msg.setAnswer(ANSWER_CODE.UNKNOWN_PROJECT, null);
+            return msg;
         }
 
-        return prj.showCards(userNickname);
+        msg.setAnswer(ANSWER_CODE.OP_OK, prj.showCards(userNickname));
+        return msg;
     }
 
     /*
@@ -370,21 +399,30 @@ public class Task extends Thread {
      * EFFECTS: Restituisce la card corrispondente a cardTitle in pojectTitle se questa esiste
      * RETURN: Una copia della card corrispondente se esiste, null altrimenti.
      */
-    public String showCard(String projectTitle, String cardTitle, String cardStatus, String userNickname) {
+    public Message showCard(Message msg) {
+        String projectTitle = msg.getProjectTitle();
+        String cardTitle = msg.getCardTitle();
+        String cardStatus = msg.getExtra();
+        String userNickname = msg.getSenderNickname();
+
         if (isNull(projectTitle, cardTitle, userNickname)) {
-            return null;
+            msg.setAnswer(ANSWER_CODE.OP_FAIL, null);
+            return msg;
         }
         if (findUserByNickname(userNickname) == null) {
-            return null;
+            msg.setAnswer(ANSWER_CODE.UNKNOWN_USER, null);
+            return msg;
         }
         Project prj = findProjectByTitle(projectTitle);
         if (prj != null) {
             Card card = prj.getCard(cardTitle, cardStatus, userNickname);
             if (card != null) {
-                return card.toString();
+                msg.setAnswer(ANSWER_CODE.OP_OK, card.toString());
+                return msg;
             }
         }
-        return null;
+        msg.setAnswer(ANSWER_CODE.UNKNOWN_CARD, null);
+        return msg;
     }
 
     /*
@@ -396,16 +434,26 @@ public class Task extends Thread {
      * 			|| PERMISSION_DENIED se l'utente non è registrato al progetto,
      * 			|| OP_FAIL in caso di errore.
      */
-    public ANSWER_CODE addCard(String projectTitle, String cardTitle, String cardDescription, String userNickname) {
-        if (isNull(projectTitle, cardTitle, cardDescription, userNickname))
-            return ANSWER_CODE.OP_FAIL;
+    public Message addCard(Message msg) {
+        String projectTitle = msg.getProjectTitle();
+        String cardTitle = msg.getCardTitle();
+        String cardDescription = msg.getExtra();
+        String userNickname = msg.getSenderNickname();
+        if (isNull(projectTitle, cardTitle, cardDescription, userNickname)) {
+            msg.setAnswer(ANSWER_CODE.OP_FAIL, null);
+            return msg;
+        }
         if (findUserByNickname(userNickname) == null) {
-            return ANSWER_CODE.UNKNOWN_USER;
+            msg.setAnswer(ANSWER_CODE.UNKNOWN_USER, null);
+            return msg;
         }
         Project prj = findProjectByTitle(projectTitle);
-        if (prj != null)
-            return prj.addCard(cardTitle, cardDescription, userNickname);
-        return ANSWER_CODE.UNKNOWN_PROJECT;
+        if (prj != null) {
+            msg.setAnswer(prj.addCard(cardTitle, cardDescription, userNickname), null);
+            return msg;
+        }
+        msg.setAnswer(ANSWER_CODE.UNKNOWN_PROJECT, null);
+        return msg;
     }
 
     /*
@@ -419,16 +467,27 @@ public class Task extends Thread {
      * 			|| PERMISSION_DENIED se l'utente non è registrato al progetto,
      * 			|| OP_FAIL in caso di errore.
      */
-    public ANSWER_CODE moveCard(String projectTitle, String cardTitle, String extra, String userNickname) {
-        if (isNull(projectTitle, cardTitle, extra, userNickname))
-            return ANSWER_CODE.OP_FAIL;
-        if (findUserByNickname(userNickname) == null)
-            return ANSWER_CODE.UNKNOWN_USER;
+    public Message moveCard(Message msg) {
+        String projectTitle = msg.getProjectTitle();
+        String cardTitle = msg.getCardTitle();
+        String extra = msg.getExtra();
+        String userNickname = message.getSenderNickname();
+        if (isNull(projectTitle, cardTitle, extra, userNickname)) {
+            msg.setAnswer(ANSWER_CODE.OP_FAIL, null);
+            return msg;
+        }
+        if (findUserByNickname(userNickname) == null) {
+            msg.setAnswer(ANSWER_CODE.UNKNOWN_USER, null);
+            return msg;
+        }
         String[] status = extra.split("->");  //Extra è una stringa tipo INPROGRESS->TOBEREVISED
         Project prj = findProjectByTitle(projectTitle);
-        if (prj != null)
-            return prj.moveCard(cardTitle, status[0], status[1], userNickname);
-        return ANSWER_CODE.UNKNOWN_PROJECT;
+        if (prj != null) {
+            msg.setAnswer(prj.moveCard(cardTitle, status[0], status[1], userNickname), null);
+            return msg;
+        }
+        msg.setAnswer(ANSWER_CODE.UNKNOWN_PROJECT, null);
+        return msg;
     }
 
     /*
@@ -436,20 +495,28 @@ public class Task extends Thread {
      * EFFECTS:
      * RETURN: Restituisce la history della card in caso non ci siano problemi, null altrimenti.
      */
-    public String getCardHistory(String projectTitle, String cardTitle, String cardStatus, String userNickname) {
+    public Message getCardHistory(Message msg) {
+        String projectTitle = msg.getProjectTitle();
+        String cardTitle = msg.getCardTitle();
+        String cardStatus = msg.getExtra();
+        String userNickname = msg.getSenderNickname();
         if (isNull(projectTitle, cardTitle, cardStatus, userNickname)) {
-            return null;
+            msg.setAnswer(ANSWER_CODE.OP_FAIL, null);
+            return msg;
         }
 
         if (findUserByNickname(userNickname) == null) {
-            return null;
+            msg.setAnswer(ANSWER_CODE.UNKNOWN_USER, null);
+            return msg;
         }
 
         Project prj = findProjectByTitle(projectTitle);
-        if (prj != null)
-            return prj.getCardHistory(cardTitle, cardStatus, userNickname);
-
-        return null;
+        if (prj != null) {
+            msg.setAnswer(ANSWER_CODE.OP_OK, prj.getCardHistory(cardTitle, cardStatus, userNickname));
+            return msg;
+        }
+        msg.setAnswer(ANSWER_CODE.UNKNOWN_PROJECT, null);
+        return msg;
     }
 
 
@@ -457,19 +524,25 @@ public class Task extends Thread {
      * REQUIRES: @params != null
      * RETURN: l' indirizzo della chat collegata al progetto projectTitle
      */
-    private String getProjectChat(String projectTitle, String senderNickname) {
+    private Message getProjectChat(Message msg) {
+        String projectTitle = msg.getProjectTitle();
+        String senderNickname = msg.getSenderNickname();
         if (isNull(projectTitle, senderNickname)) {
-            return null;
+            msg.setAnswer(ANSWER_CODE.OP_FAIL, null);
+            return msg;
         }
         if (findUserByNickname(senderNickname) == null) {
-            return null;
+            msg.setAnswer(ANSWER_CODE.UNKNOWN_USER, null);
+            return msg;
         }
 
         Project prj = findProjectByTitle(projectTitle);
-        if (prj != null)
-            return prj.getChatAddress(senderNickname);
-
-        return null;
+        if (prj != null) {
+            msg.setAnswer(ANSWER_CODE.OP_OK, prj.getChatAddress(senderNickname));
+            return msg;
+        }
+        msg.setAnswer(ANSWER_CODE.UNKNOWN_PROJECT, null);
+        return msg;
     }
 
 
@@ -477,19 +550,26 @@ public class Task extends Thread {
      * REQUIRES: @params != null
      * RETURN: la history della chat collegata al progetto projectTitle
      */
-    private String getChatHistory(String projectTitle, String senderNickname) {
+    private Message getChatHistory(Message msg) {
+        String projectTitle = msg.getProjectTitle();
+        String senderNickname = msg.getSenderNickname();
         if (isNull(projectTitle, senderNickname)) {
-            return null;
+            msg.setAnswer(ANSWER_CODE.OP_FAIL, null);
+            return msg;
         }
         if (findUserByNickname(senderNickname) == null) {
-            return null;
+            msg.setAnswer(ANSWER_CODE.UNKNOWN_USER, null);
+            return msg;
         }
 
         Project prj = findProjectByTitle(projectTitle);
-        if (prj != null)
-            return prj.getChatHistory();
+        if (prj != null) {
+            msg.setAnswer(ANSWER_CODE.OP_OK, prj.getChatHistory());
+            return msg;
+        }
 
-        return null;
+        msg.setAnswer(ANSWER_CODE.UNKNOWN_PROJECT, null);
+        return msg;
     }
 
 
@@ -502,22 +582,25 @@ public class Task extends Thread {
      * 			|| PROJECT_NOT_FINISHED se esiste almeno una card non nella lista DONE
      * 			|| OP_FAIL in caso di errore.
      */
-    public ANSWER_CODE cancelProject(String projectTitle, String userNickname) {
-        if (isNull(projectTitle, userNickname))
-            return ANSWER_CODE.OP_FAIL;
+    public Message cancelProject(Message msg) {
+        String projectTitle = msg.getProjectTitle();
+        String userNickname = msg.getSenderNickname();
+        if (isNull(projectTitle, userNickname)) {
+            msg.setAnswer(ANSWER_CODE.OP_FAIL, null);
+            return msg;
+        }
         if (findUserByNickname(userNickname) == null) {
-            return ANSWER_CODE.UNKNOWN_USER;
+            msg.setAnswer(ANSWER_CODE.UNKNOWN_USER, null);
+            return msg;
         }
 
         Project prj = findProjectByTitle(projectTitle);
         if (prj != null) { // TODO: 03/05/21 pulire
-            //ANSWER_CODE answer = prj.cancelProject(userNickname);
-            //if (answer == ANSWER_CODE.OP_OK) {
-                return projectsList.remove(prj,userNickname);
-                //return ANSWER_CODE.OP_OK;
-            //}
+            msg.setAnswer(projectsList.remove(prj, userNickname), null);
+            return msg;
         }
-        return ANSWER_CODE.UNKNOWN_PROJECT;
+        msg.setAnswer(ANSWER_CODE.UNKNOWN_PROJECT, null);
+        return msg;
     }
 
 
