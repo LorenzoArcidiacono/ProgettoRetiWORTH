@@ -33,6 +33,7 @@ public class Leader extends Thread {
                 System.out.println("Leader: ricevuto segnale di interruzione");
                 socketList.clean();
                 exit = true;
+                continue;
             }
             //Valuto, in base ai thread attivi e al numero di op. dall'ultimo salvataggio, se sia necessario fare un backup e se è un buon momento
             if ((pool.getActiveCount() <= ServerSettings.THREAD_SAFE_NUMBER && countOperation >= ServerSettings.SAFE_UNSAVED_OPERATION)
@@ -41,7 +42,7 @@ public class Leader extends Thread {
                 pool.execute(new BackupTask()); //chiedo al pool di eseguire un task di backup
             }
 
-            synchronized (socketList) { // TODO: 22/04/21 ridurre al minimo questo blocco
+            synchronized (socketList) {
                 Iterator<Connection> iterator = socketList.iterator();
                 // TODO: 27/01/21 posso impostare un timeout? se ho pochi client giro molto a vuoto, posso cambiarlo in base al lavoro del pool o al numero di client
                 while (iterator.hasNext()) { //scorro la lista delle connessioni

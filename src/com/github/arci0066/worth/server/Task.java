@@ -49,6 +49,12 @@ public class Task extends Thread {
         User user = findUserByNickname(message.getSenderNickname());
         if (user == null) {
             System.err.println("Task: Utente inesistente");
+            message.setAnswer(ANSWER_CODE.OP_FAIL,null);
+            try {
+                sendAnswer();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
             return;
         }
 
@@ -129,7 +135,7 @@ public class Task extends Thread {
                 break;
             }
             case GET_PRJ_CHAT: {
-                message = getProjectChat(message);
+                message = getProjectChat(message); // TODO: 13/05/21 provare a levare message = ... e vedere se funziona 
                 break;
             }
             case GET_CHAT_HST: {
@@ -271,7 +277,6 @@ public class Task extends Thread {
     //Meglio se restituisse una List?
     public Message listProjects(Message msg) {
         String answer = projectsList.getProjectsTitle();
-        System.err.println(answer);
         msg.setAnswer(ANSWER_CODE.OP_OK, answer);
         return msg;
     }

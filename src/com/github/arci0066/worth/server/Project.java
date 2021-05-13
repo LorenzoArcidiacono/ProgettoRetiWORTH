@@ -381,9 +381,8 @@ public class Project implements Serializable {
                 String s = new String(dp.getData(), 0, dp.getLength());
                 chatMsgs.add(s);
             }
-        } catch (SocketTimeoutException e) { //Non ci sono altri messaggi in coda quindi posso uscire.
-             // TODO: 03/05/21 esco dal ciclo
-        } catch (IOException e) {
+        } catch (SocketTimeoutException e) { } //Non ci sono altri messaggi in coda quindi posso uscire.
+        catch (IOException e) {
             e.printStackTrace();
         } finally {
             lock.writeLock().unlock();

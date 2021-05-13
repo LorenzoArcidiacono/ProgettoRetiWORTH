@@ -59,15 +59,15 @@ public class ProjectsList  {
     }
 
     // ------ Getters -------
-    /* Doppio controllo per evitare che troppi Thread aspettino la mutex,
-     * secondo controllo per casi in cui un thread si blocchi nell' if prima di completare
-     */
 
     /*
      * EFFECTS: instanzia un oggetto singleton della classe
      * RETURN: l' istanza dell' oggetto
     */
     public static ProjectsList getSingletonInstance() {
+        /* Doppio controllo per evitare che troppi Thread aspettino la mutex,
+         * secondo controllo per casi in cui un thread si blocchi nell' if prima di completare
+         */
         if (instance == null) {
             synchronized (ProjectsList.class) {
                 if (instance == null)
@@ -166,18 +166,6 @@ public class ProjectsList  {
         return answer;
     }
 
-    private void deleteDir(File file) {
-        File[] contents = file.listFiles();
-        System.err.println(contents);
-        if (contents != null) {
-            for (File f : contents) {
-                if (! Files.isSymbolicLink(f.toPath())) {
-                    deleteDir(f);
-                }
-            }
-        }
-        file.delete();
-    }
 
     /*
      * REQUIRES: projectTitle != null
@@ -199,6 +187,26 @@ public class ProjectsList  {
         return project;
     }
 
+    //---------- METODI PRIVATI -----------
+
+    /*
+     * REQUIRES: file != null
+     * EFFECTS: Cancella ricorsivamente tutti i file contenuti in una cartella ed eventuali sottocartelle.
+     */
+    private void deleteDir(File file) {
+        if(file == null)
+            return;
+        File[] contents = file.listFiles();
+        System.err.println("PrjList -> deleteDir(): "+contents);
+        if (contents != null) {
+            for (File f : contents) {
+                if (! Files.isSymbolicLink(f.toPath())) {
+                    deleteDir(f);
+                }
+            }
+        }
+        file.delete();
+    }
 
     // ---------- Serialization ------------
 

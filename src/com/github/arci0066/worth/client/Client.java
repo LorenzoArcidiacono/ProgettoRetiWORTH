@@ -69,6 +69,7 @@ public class Client {
         if (args.length > 0) {
             try { // se è specificato un file usa quello come input del client
                 System.setIn(new FileInputStream(args[0]));
+                System.out.println("Leggo input da:"+ args[0]);
             } catch (FileNotFoundException e) {
                 e.printStackTrace();
             }
@@ -108,7 +109,7 @@ public class Client {
         switch (operazione) {
             case 1 -> check = register();
             case 2 -> message = login();
-            default -> exit = true; // TODO: 27/01/21 riprovare
+            default -> exit = true;
         }
 
         if (!check) { //registrazione non andata a buon fine
@@ -125,7 +126,7 @@ public class Client {
                 ANSWER_CODE answer_code = serverAnswer();
                 if (answer_code != ANSWER_CODE.OP_OK) { //se il login non è andato a buon fine
                     exit = true;
-                    System.err.println("Chiusura dovuta a errore di Login.");
+                    System.err.println("ERRORE DI LOGIN, CHIUSURA.");
                 }
             }
         }
@@ -192,17 +193,17 @@ public class Client {
         }
         try {
             //Chiudo tutte le comunicazioni e i buffer, deregistro il client dalle callback e chiudo il thread daemon
-            daemon.interrupt(); // TODO: 05/05/21 controllare che sia corretto
-            System.out.println("Chiudo Socket"); // TODO: 26/04/21 da levare una volta finito il testing
             scanner.close();
             clientSocket.close();
-            readerIn.close();
-            writerOut.close();
-            serverInterface.unregisterForCallback(stub);
+
+            if(daemon != null) daemon.interrupt();
+            if(readerIn != null) readerIn.close();
+            if(writerOut != null) writerOut.close();
+            if(serverInterface != null ) serverInterface.unregisterForCallback(stub);
             for (ChatAddress ca : chatAddresses) {
                 ca.getMulticastSocket().close();
             }
-        } catch (IOException e) { // TODO: 03/05/21 se esco al primo menù solleva di sicuro eccezioni
+        } catch (IOException e) {
             e.printStackTrace();
         }
         System.out.println("Esco dal programma.");
@@ -270,24 +271,30 @@ public class Client {
             e.printStackTrace();
         }
         Message answer = gson.fromJson(read, Message.class);
+
         switch (answer.getOperationCode()) {
             case LIST_USER, LIST_ONLINE_USER, LIST_PROJECTS, SHOW_CARD, SHOW_MEMBERS, SHOW_PROJECT_CARDS, GET_CARD_HISTORY: {
+                //Stampo la risposta all'operazione
                 System.out.println("\n@> " + answer.getAnswerCode() + "\n");
+                //Stampo le informazioni contenute in extra quando necessario
                 if (answer.getAnswerCode().equals(ANSWER_CODE.OP_OK)) {
                     System.out.println("\n@> " + answer.getExtra() + "\n");
                 }
                 break;
             }
+            case CREATE_PROJECT, CANCEL_PROJECT, ADD_CARD, ADD_MEMBER, MOVE_CARD: {
+                //Stampo la risposta all'operazione
+                System.out.println("\n@> " + answer.getAnswerCode() + "\n");
+                break;
+            }
             case GET_PRJ_CHAT: {
                 if (answer.getAnswerCode().equals(ANSWER_CODE.OP_OK)) {
                     if (answer.getExtra().equals(ANSWER_CODE.PERMISSION_DENIED.toString())) {
-                        System.out.println("\n@> Utente non membro del progetto.\n");
+                        System.out.println("\n@> " + answer.getExtra() + "\n");
                         return ANSWER_CODE.PERMISSION_DENIED;
                     } else {
                         try {
-                            //synchronized (chatAddresses) {
                             chatAddresses.add(new ChatAddress(answer.getProjectTitle(), answer.getExtra()));
-                            //}
                         } catch (IOException e) {
                             e.printStackTrace();
                         }
@@ -618,10 +625,9 @@ public class Client {
         System.out.print("Titolo del Progetto: ");
         projectTitle = scanner.next();
 
-        // TODO: 06/05/21 stampa la risposta un sacco di volte
-        //se non sono iscritto alla chat mi iscrivo
+        //Vede se la chat è già in memoria
         chatAddress = getProjectChatAddress(projectTitle);
-        if (chatAddress == null) { //Caso in cui non abbia i riferimenti del progetto in memoria
+        if (chatAddress == null) { //Caso in cui non abbia i riferimenti del progetto in memoria li chiedo al server
             response = requestProjectChat(projectTitle);
         }
         if (response == ANSWER_CODE.OP_OK) { //Se ho ricevuto la chat del progetto
@@ -651,9 +657,9 @@ public class Client {
                 ChatAddress chat;
                 boolean empty;
 
-                while (true) {
+                while (!isInterrupted()) {
                     if (chatAddresses.isEmpty()) {
-                        try { // TODO: 13/05/21 impostare una signal?
+                        try {
                             Thread.sleep(1000);
                             continue;
                         } catch (InterruptedException e) { //Caso in cui venga interrotto durante la sleep
@@ -682,6 +688,7 @@ public class Client {
                     }
                     index = (index + 1) % chatAddresses.size();
                 }
+                System.err.println("Daemon thread: ESCO");
             }
         };
         t.setDaemon(true);
