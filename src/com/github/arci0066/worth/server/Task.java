@@ -630,6 +630,7 @@ public class Task extends Thread {
      * REQUIRES: userNickname != null
      * RETURN: se esiste l'utente con nickname == userNickname, null altrimenti
      */
+    // TODO: 17/05/21 potrei cambiare in find user in project, cercando subito di capire se l'utente è membro del progetto 
     private User findUserByNickname(String userNickname) {
         return registeredUsersList.findUser(userNickname);
     }
