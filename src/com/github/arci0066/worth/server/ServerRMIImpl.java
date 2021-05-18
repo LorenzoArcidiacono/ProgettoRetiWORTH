@@ -27,11 +27,7 @@ public class ServerRMIImpl extends RemoteServer implements ServerRMI {
             System.out.println("Nuovo client registrato per la callback.");
 
             // TODO: 12/04/21 capire se va bene così, funziona
-            String registeredUserList;
-            synchronized (usersList) { //TODO capire se serve sincronizzare
-                registeredUserList = usersList.jsonString(); // TODO: 09/04/21 Meglio così o json?
-                System.err.println("ServerRMIImpl "+registeredUserList+"\n In teoria "+usersList.jsonString());// TODO: 26/04/21 cancellare
-            }
+            String registeredUserList = usersList.jsonString(); // TODO: 09/04/21 Meglio così o json?
             update(registeredUserList);
         }
     }
@@ -43,6 +39,8 @@ public class ServerRMIImpl extends RemoteServer implements ServerRMI {
                 System.out.println("Client deregistrato dalla callback");
             else
                 System.err.println("Unable to unregister client");
+            //notifico in caso di chiusura di un client
+            update(usersList.jsonString());
         }
 
 

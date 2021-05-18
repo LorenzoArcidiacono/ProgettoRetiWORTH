@@ -12,13 +12,13 @@ public class Message{
     private String extra;
 
     //------------ Constructors -------------
-    public Message(String senderNickname, String extra, OP_CODE operationCode, String projectTitle, String cardTitle, ANSWER_CODE answer) {
+    public Message(String senderNickname, String extra, OP_CODE operationCode, String projectTitle, String cardTitle) {
         this.senderNickname = senderNickname;
         this.operationCode = operationCode;
         this.projectTitle = projectTitle;
         this.cardTitle = cardTitle;
         this.extra = extra;
-        this.answerCode = answer;
+        this.answerCode = null;
     }
 
     // ------ Getters -------
@@ -56,9 +56,8 @@ public class Message{
      * EFFECTS: setta il messaggio di risposta da parte del server
     */
     public void setAnswer(ANSWER_CODE answer_code, String extra) {
-        if (answer_code == null || extra == null) {
-            // TODO: 22/04/21 sollevare un' eccezione
-            return;
+        if (answer_code == null) {
+            throw new NullPointerException();
         }
         this.answerCode = answer_code;
         this. extra = extra;

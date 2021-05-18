@@ -6,6 +6,8 @@
 *
 */
 package com.github.arci0066.worth.server;
+import com.github.arci0066.worth.enumeration.ANSWER_CODE;
+
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -48,7 +50,6 @@ public class ProjectsList  {
 
         String suffix, address;
 
-        // TODO: 14/04/21 passare indirizzo e porta 
         for (Project p : projectsList) {
             //alloco e sistemo le variabili che non sono salvate nel file di backup
             suffix = (++lastUsedIP).toString();
@@ -58,15 +59,15 @@ public class ProjectsList  {
     }
 
     // ------ Getters -------
-    /* Doppio controllo per evitare che troppi Thread aspettino la mutex,
-     * secondo controllo per casi in cui un thread si blocchi nell' if prima di completare
-     */
 
     /*
      * EFFECTS: instanzia un oggetto singleton della classe
      * RETURN: l' istanza dell' oggetto
     */
     public static ProjectsList getSingletonInstance() {
+        /* Doppio controllo per evitare che troppi Thread aspettino la mutex,
+         * secondo controllo per casi in cui un thread si blocchi nell' if prima di completare
+         */
         if (instance == null) {
             synchronized (ProjectsList.class) {
                 if (instance == null)
@@ -115,14 +116,22 @@ public class ProjectsList  {
      * EFFECTS: aggiunge il progetto alla lista se questo non è esistente ( Nota. tutti i controlli sono fatti dal chiamante )
      */
     public void add(String projectTitle, String userNickname) {
-        // TODO: 14/04/21 controllare che porta e indirizzo restino nei parametri
+        //setto il nuovo indirizzo per la chat
+        lock.writeLock().lock();
         String suffix = (++lastUsedIP).toString();
         String address = multicastIpPrefix + suffix;
+        lastUsedPort--;
+        lock.writeLock().unlock();
+        
+        if(lastUsedIP < 0 || lastUsedIP > 255){ //indirizzi da 239.0.0.0 a 239.0.0.255
+            System.err.println("Errore indirizzamento chat del progetto.");
+            return;
+        }
 
-        System.out.println("Indirizzo chat del progetto"+projectTitle+":"+address+":"+(lastUsedPort-1));
+        System.out.println("Indirizzo chat del progetto"+projectTitle+":"+address+":"+(lastUsedPort));
         lock.writeLock().lock();
         try {
-            projectsList.add(new Project(projectTitle,userNickname,address,--lastUsedPort));
+            projectsList.add(new Project(projectTitle,userNickname,address,lastUsedPort));
         } finally {
             lock.writeLock().unlock();
         }
@@ -133,13 +142,28 @@ public class ProjectsList  {
      * REQUIRES: project != null
      * EFFECTS: rimuove il progetto alla lista se questo esiste ( Nota. tutti i controlli sono fatti dal chiamante )
      */
-    public void remove(Project project) {
-        lock.writeLock().lock();
-        try {
-            projectsList.remove(project);
-        } finally {
-            lock.writeLock().unlock();
+    public ANSWER_CODE remove(Project project, String userNickname) {
+        //Salvo il path della cartella
+        Path path = Paths.get(serverBackupDirPath + "/" + project.getProjectTitle());
+
+        //Controllo di poter cancellare il progetto
+        ANSWER_CODE answer = project.isCancellable(userNickname);
+
+        if (answer == ANSWER_CODE.OP_OK){
+            //cancello il progetto dalla lista e libero la memoria
+            lock.writeLock().lock();
+            try {
+                projectsList.remove(project);
+                project.cancelProject(userNickname);
+            } finally {
+                lock.writeLock().unlock();
+            }
+            //Cancello la cartella dal File System
+            if(Files.isDirectory(path)){
+                deleteDir(new File(String.valueOf(path)));
+            }
         }
+        return answer;
     }
 
 
@@ -149,7 +173,6 @@ public class ProjectsList  {
      * RETURN: project tale che project.getProjectTitle == projectTitle, null altrimenti
      */
     public Project findProject(String projectTitle) {
-        // TODO: 22/04/21 controllare null
         Project project = null;
 
         lock.readLock().lock();
@@ -164,6 +187,26 @@ public class ProjectsList  {
         return project;
     }
 
+    //---------- METODI PRIVATI -----------
+
+    /*
+     * REQUIRES: file != null
+     * EFFECTS: Cancella ricorsivamente tutti i file contenuti in una cartella ed eventuali sottocartelle.
+     */
+    private void deleteDir(File file) {
+        if(file == null)
+            return;
+        File[] contents = file.listFiles();
+        System.err.println("PrjList -> deleteDir(): "+contents);
+        if (contents != null) {
+            for (File f : contents) {
+                if (! Files.isSymbolicLink(f.toPath())) {
+                    deleteDir(f);
+                }
+            }
+        }
+        file.delete();
+    }
 
     // ---------- Serialization ------------
 

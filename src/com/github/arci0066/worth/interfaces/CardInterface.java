@@ -30,11 +30,6 @@ public interface CardInterface {
     String getCardHistory();
 
     //    ----------- Methods ------------
-    /* SYNCHRONIZE:
-     *   READ:
-     *   WRITE: status
-     */
-    ANSWER_CODE changeStatus(CARD_STATUS newCardStatus);
 
     /* SYNCHRONIZE:
      *   READ:

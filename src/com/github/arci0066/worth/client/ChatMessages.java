@@ -9,13 +9,12 @@ public class ChatMessages {
 
     private String projectTitle;
     private List<String> messages;
-    private Gson gson;
 
 // ------ Constructors ------
 
     public ChatMessages(String projectTitle, String messages) {
         this.projectTitle = projectTitle;
-        gson = new Gson();
+        Gson gson = new Gson();
         this.messages = gson.fromJson(messages, new TypeToken<List<String>>() {
         }.getType());
     }
@@ -35,7 +34,7 @@ public class ChatMessages {
     public String getMessages() {
         String response= "";
         if(messages.isEmpty())
-            return "\n@> - Nessun nuovo messaggio -\n";
+            return "\n@> - - Nessun nuovo messaggio - -\n";
         for (String str: messages) {
             response += str +"\n";
         }

@@ -12,25 +12,23 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class NotifyEventInterfaceImpl implements NotifyEventInterface {
-    private List<String> userList;
+    private List<String> userStatus; //struttura dati condivisa con il client
+    Gson gson;
 
-    public NotifyEventInterfaceImpl() {
+    public NotifyEventInterfaceImpl(List<String> userStatus) {
         super();
+       gson = new Gson();
+        this.userStatus = userStatus;
     }
 
     @Override
     public void notifyEvent(String value) throws RemoteException {
-        // TODO: 09/04/21 stampare meglio la lista degli utenti
-        Gson gson = new Gson();
-        userList = gson.fromJson(value,new TypeToken<List<String>>(){}.getType());
-        System.err.println("Ricevuto dal server: "+ userList);
+        List<String> userList = gson.fromJson(value, new TypeToken<List<String>>() {}.getType());
+        // TODO: 05/05/21 funziona ma costoso
+        synchronized (userStatus) {
+            userStatus.clear();
+            userStatus.addAll(userList);
+        }
     }
 
-    // ------ Constructors ------
-
-// ------ Getters -------
-
-// ------ Setters -------
-
-// ------ Methods ------
 }

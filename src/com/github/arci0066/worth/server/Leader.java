@@ -9,14 +9,16 @@ package com.github.arci0066.worth.server;
 
 
 import java.io.IOException;
+import java.net.SocketException;
 import java.util.Iterator;
 import java.util.concurrent.ThreadPoolExecutor;
 
 
 public class Leader extends Thread {
-    private SocketList socketList;
+    private final SocketList socketList;
     private ThreadPoolExecutor pool;
     private int countOperation = 0;
+    private boolean exit = false;
 
     // ------ Constructors ------
     public Leader(ThreadPoolExecutor pool) {
@@ -24,20 +26,25 @@ public class Leader extends Thread {
         this.pool = pool;
     }
 
-    // TODO: 26/02/21 salvare tutto prima di uscire
     @Override
     public void run() {
-        while (true) { // TODO: 27/01/21 posso impostare un timeout? se ho pochi client giro molto a vuoto, posso cambiarlo in base al lavoro del pool o al numero di client 
-            synchronized (socketList) { // TODO: 22/04/21 ridurre al minimo questo blocco
+        while (!exit) {
+            if(isInterrupted()) { //controlla se è stato inviato un segnale di interruzione e nel caso fa pulizia prima di chiudere
+                System.out.println("Leader: ricevuto segnale di interruzione");
+                socketList.clean();
+                exit = true;
+                continue;
+            }
+            //Valuto, in base ai thread attivi e al numero di op. dall'ultimo salvataggio, se sia necessario fare un backup e se è un buon momento
+            if ((pool.getActiveCount() <= ServerSettings.THREAD_SAFE_NUMBER && countOperation >= ServerSettings.SAFE_UNSAVED_OPERATION)
+                    || countOperation >= ServerSettings.MAX_UNSAVED_OPERATION) {
+                countOperation = 0;
+                pool.execute(new BackupTask()); //chiedo al pool di eseguire un task di backup
+            }
 
-                //Valuto, in base ai thread attivi e al numero di op. dall'ultimo salvataggio se è necessario fare un backup e se è un buon momento
-                if ((pool.getActiveCount() <= ServerSettings.THREAD_SAFE_NUMBER && countOperation >= ServerSettings.SAFE_UNSAVED_OPERATION)
-                        || countOperation >= ServerSettings.MAX_UNSAVED_OPERATION) {
-                    countOperation = 0;
-                    pool.execute(new BackupTask()); //chiedo al pool di eseguire un task di backup
-                }
-
+            synchronized (socketList) {
                 Iterator<Connection> iterator = socketList.iterator();
+                // TODO: 27/01/21 posso impostare un timeout? se ho pochi client giro molto a vuoto, posso cambiarlo in base al lavoro del pool o al numero di client
                 while (iterator.hasNext()) { //scorro la lista delle connessioni
                     Connection connection = iterator.next();
                     try {
@@ -48,7 +55,7 @@ public class Leader extends Thread {
                             connection.setInUse(true);
                             // passo al pool un nuovo task per questa connessione
                             pool.execute(new Task(connection));
-                            countOperation++; // TODO: 12/04/21 valutare se conviene contare solo le op. di scrittura
+                            countOperation++;
                         }
                         if (connection.isClosed()) {
                             // se la connessione è chiusa la rimuovo dalla lista
@@ -56,8 +63,8 @@ public class Leader extends Thread {
                             connection.close();
                             iterator.remove();
                         }
-                        // TODO: 26/01/21 aggiungere caso connessione chiusa
-                    } catch (IOException e) {
+                    }
+                    catch (IOException e) {
                         e.printStackTrace();
                     }
                 }
