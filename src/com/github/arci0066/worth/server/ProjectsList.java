@@ -17,8 +17,7 @@ import java.util.List;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import static com.github.arci0066.worth.server.ServerSettings.projectsBackupFile;
-import static com.github.arci0066.worth.server.ServerSettings.serverBackupDirPath;
+import static com.github.arci0066.worth.server.ServerSettings.*;
 
 /*CLASSE SINGLETON && THREAD SAFE*/
 public class ProjectsList  {
@@ -41,7 +40,7 @@ public class ProjectsList  {
         lock = new ReentrantReadWriteLock();
     }
 
-    private ProjectsList(List<Project> oldProjects) {
+    /*private ProjectsList(List<Project> oldProjects) {
         lock = new ReentrantReadWriteLock();
         projectsList = oldProjects;
 
@@ -55,6 +54,22 @@ public class ProjectsList  {
             suffix = (++lastUsedIP).toString();
             address = multicastIpPrefix + suffix;
             p.resetAfterBackup(address,--lastUsedPort);
+        }
+    }*/
+
+    private ProjectsList(List<Path> paths) {
+        projectsList = new ArrayList<>();
+        lock = new ReentrantReadWriteLock();
+        lastUsedIP = 0;
+        lastUsedPort = ServerSettings.REGISTRY_PORT;
+
+        String suffix, address;
+// TODO: 03/06/21 controllare che la porta e l'indirizzo non siano già in uso
+        for (Path path: paths) { //crea un progetto per ogni cartella
+            String projectName = path.toString().replaceAll(serverBackupDirPath+"/","");
+            suffix = (++lastUsedIP).toString();
+            address = multicastIpPrefix + suffix;
+            projectsList.add(new Project(path,address,--lastUsedPort));
         }
     }
 
@@ -81,11 +96,21 @@ public class ProjectsList  {
      * EFFECTS: instanzia un oggetto singleton della classe nel caso di backup
      * RETURN: l' istanza dell' oggetto
      */
-    public static ProjectsList getSingletonInstance(List<Project> oldProjects) {
+    /*public static ProjectsList getSingletonInstance(List<Project> oldProjects) {
         if (instance == null) {
             synchronized (ProjectsList.class) {
                 if (instance == null)
                     instance = new ProjectsList(oldProjects);
+            }
+        }
+        return instance;
+    }*/
+
+    public static ProjectsList getSingletonInstance(List<Path> paths) {
+        if (instance == null) {
+            synchronized (ProjectsList.class) {
+                if (instance == null)
+                    instance = new ProjectsList(paths);
             }
         }
         return instance;
@@ -237,6 +262,9 @@ public class ProjectsList  {
                 Files.createDirectories(path);
                 //salva le card del progetto
                 prj.saveCard(path);
+
+                Path userListPath = Paths.get(path+projectUsersBackupFile);
+                prj.saveUsersList(userListPath);
             }
         } catch (IOException e) {
             e.printStackTrace();

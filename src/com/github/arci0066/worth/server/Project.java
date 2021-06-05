@@ -1,7 +1,11 @@
 package com.github.arci0066.worth.server;
 
 import com.github.arci0066.worth.enumeration.*;
+
+import static com.github.arci0066.worth.server.ServerSettings.*;
+
 import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 
 import java.io.*;
 import java.net.DatagramPacket;
@@ -13,9 +17,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 
 //CLASSE THREAD SAFE
@@ -59,6 +66,30 @@ public class Project implements Serializable {
             e.printStackTrace();
         }
         chatMsgs = new ArrayList<>();
+
+        lock = new ReentrantReadWriteLock();
+    }
+
+    public Project(Path path, String address, int port) {
+
+        todoList = new ArrayList<>();
+        inProgressList = new ArrayList<>();
+        toBeRevisedList = new ArrayList<>();
+        doneList = new ArrayList<>();
+
+        readUsersBackup(path);
+        readCardBackup(path.toString());
+        try {
+            this.port = port;
+            this.address = address;
+            ms = new MulticastSocket(port);
+            ia = InetAddress.getByName(address);
+            ms.joinGroup(ia);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        chatMsgs = new ArrayList<>();
+
 
         lock = new ReentrantReadWriteLock();
     }
@@ -381,7 +412,8 @@ public class Project implements Serializable {
                 String s = new String(dp.getData(), 0, dp.getLength());
                 chatMsgs.add(s);
             }
-        } catch (SocketTimeoutException e) { } //Non ci sono altri messaggi in coda quindi posso uscire.
+        } catch (SocketTimeoutException e) {
+        } //Non ci sono altri messaggi in coda quindi posso uscire.
         catch (IOException e) {
             e.printStackTrace();
         } finally {
@@ -487,16 +519,104 @@ public class Project implements Serializable {
      */
     private void backupCard(Path path, Card crd) {
         Path cardPath;
-        cardPath = Paths.get(path + "/" + crd.getCardTitle() + ".txt");
+        Gson gson = new Gson();
+        cardPath = Paths.get(path + "/" + crd.getCardTitle() + ".crd");
         try (BufferedWriter writer = Files.newBufferedWriter(cardPath, StandardCharsets.UTF_8)) {
-            writer.write("Title: " + crd.getCardTitle() + "\n");
-            writer.write("Description: " + crd.getCardDescription() + "\n");
-            writer.write("History: " + crd.getCardHistory() + "\n");
+           /* writer.write("Title: " + crd.getCardTitle() + "<\n");
+            writer.write("Description: " + crd.getCardDescription() + "<\n");
+            writer.write("List:"+crd.getCardStatus()+"<\n");
+            writer.write("History: " + crd.getCardHistory() + "<\n");*/
+            writer.write(gson.toJson(crd));
         } catch (IOException ex) {
             ex.printStackTrace();
         }
     }
 
+    // TODO: 18/05/21 usare gson o altro. così troppo complicato e lungo 
+    private void readCardBackup(String projectPath) {
+        Gson gson = new Gson();
+        List<Path> result = null;
+
+        //Legge i nomi dei file nella cartella
+        try (Stream<Path> paths = Files.walk(Paths.get(projectPath), 1)) {
+            result = paths.filter(Files::isRegularFile)
+                    .collect(Collectors.toList());
+            //result.remove(Paths.get(serverBackupDirPath));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        //prende i path delle card
+        if (result != null) {
+            // TODO: 18/05/21 capire questa lambda
+            result.removeIf(path -> !(path.toString().contains(".crd")));
+        }
+        System.out.println("Project->bkpCard paths:" + result);
+
+        //Legge tutte le card e le aggiunge alla lista
+        String cardTextFile;
+        for (Path path: result) {
+            cardTextFile = "";
+            try (BufferedReader reader = Files.newBufferedReader(path)) {
+                String line;
+                while ((line = reader.readLine()) != null)
+                    cardTextFile += line;
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            System.err.println("project->cardBck card: "+cardTextFile);
+            //creo la card in base al json salvato
+            Card crd = gson.fromJson(cardTextFile, new TypeToken<Card>() {}.getType());
+            
+            //Seleziono la lista corretta e vi aggiungo la card
+            System.err.println("project->cardBck card final:"+crd);
+            List<Card> crdList = getList(crd.getCardStatus());
+            if(crdList == null){
+                // TODO: 03/06/21 eccezione
+                System.err.println("Errore "+crd+","+crd.getCardStatus() );
+                return;
+            }
+            crdList.add(crd);
+
+            /*if (!cardTextFile.equals("")){ //separo i dati della card
+                String[] cardData = cardTextFile.split("<");
+                //aggiungo la card al progetto
+                System.err.println("project->cardBck card single: "+ Arrays.toString(cardData));
+                //addCard(cardData[0],cardData[1],cardData[2],cardData[3]);
+            }*/
+        }
+    }
+
+    public void saveUsersList(Path userListPath) {
+        Gson gson = new Gson();
+        try {
+            BufferedWriter writer = Files.newBufferedWriter(userListPath, StandardCharsets.UTF_8);
+            writer.write(gson.toJson(projectUsers));
+            System.out.println("Project->saveUser:" + gson.toJson(projectUsers) + " anzi che " + projectUsers);
+            writer.flush();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void readUsersBackup(Path path) {
+        String usersNickname = "";
+        Path nicknamePath = Paths.get(path + projectUsersBackupFile); //path del file degli utenti
+        Gson gson = new Gson();
+        projectTitle = path.toString().replaceAll(serverBackupDirPath + "/", ""); //Estrae il tiolo del progetto
+
+        try (BufferedReader reader = Files.newBufferedReader(nicknamePath)) {
+            String line;
+            while ((line = reader.readLine()) != null)
+                usersNickname += line;
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        //trascrive gli utenti registrati
+        projectUsers = gson.fromJson(usersNickname, new TypeToken<List<String>>() {
+        }.getType());
+        System.err.println("Project-> utenti letti: " + projectUsers);
+    }
 
     /*
      * REQUIRES: @params != null

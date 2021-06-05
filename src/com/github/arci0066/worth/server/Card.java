@@ -26,6 +26,9 @@ public class Card implements com.github.arci0066.worth.interfaces.CardInterface,
         cardStatus = CARD_STATUS.TODO;
     }
 
+    public Card(String title, String desc, CardHistory cardHistory) {
+    }
+
     //    ---------- Getters -------------
     @Override
     public String getCardTitle() {

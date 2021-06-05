@@ -27,6 +27,8 @@ import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static com.github.arci0066.worth.server.ServerSettings.*;
 
@@ -172,7 +174,7 @@ public class Server {
 
 
         //Leggo il backup dei progetti
-        try (FileInputStream fis = new FileInputStream(projectsBackupFile);
+        /*try (FileInputStream fis = new FileInputStream(projectsBackupFile);
              ObjectInputStream in = new ObjectInputStream(fis)) {
             oldProjectsList = (List<Project>) in.readObject();
             projectsList = ProjectsList.getSingletonInstance(oldProjectsList); //setto la lista progetti a partire dal backup
@@ -181,6 +183,24 @@ public class Server {
             System.err.println("Nessun file di backup Progetti trovato.");
         } catch (IOException | ClassNotFoundException ex) {
             ex.printStackTrace();
+        }*/
+
+        //Leggo il backup dei progetti
+        List<Path> result = null;
+        //Leggo i nomi delle cartelle
+        try (Stream<Path> paths = Files.walk(Paths.get(serverBackupDirPath),1)) {
+            result = paths.filter(Files::isDirectory)
+                    .collect(Collectors.toList());
+            result.remove(Paths.get(serverBackupDirPath));
+        } catch (IOException e) {
+            e.printStackTrace();
         }
+        System.out.println("Server -> progetti: "+result);
+       /* for (Path proj: result) {
+            String pName = proj.toString().replaceAll(serverBackupDirPath+"/","");
+            System.out.println(pName);
+        }*/
+        projectsList = ProjectsList.getSingletonInstance(result);
+        System.out.println("Server->PrjList: "+projectsList.getProjectsTitle());
     }
 }

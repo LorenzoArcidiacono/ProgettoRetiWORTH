@@ -17,7 +17,8 @@ public class BackupTask extends Thread {
         System.out.println("Backup in memoria.");
 //        Serializzazioni
         usersList.serialize();
-        projectsList.serialize();
+        // TODO: 03/06/21 posso levarlo
+        //projectsList.serialize();
 
 //        Salva i progetti singolarmente in cartelle
         projectsList.saveAll();
