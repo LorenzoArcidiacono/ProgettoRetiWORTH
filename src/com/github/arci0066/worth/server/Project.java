@@ -254,7 +254,10 @@ public class Project implements Serializable {
         // TODO: 13/05/21 potrei mettere qui il reciveMessagge(), se aggiungo un utente è probabile che voglia leggere la chat
         if (!isUserRegisteredToProject(oldUserNickname))
             return ANSWER_CODE.PERMISSION_DENIED;
-
+        //Se il nuovo utente fa già parte del progetto esco
+        if(isUserRegisteredToProject(newUserNickname)){
+            return ANSWER_CODE.EXISTING_USER;
+        }
         ANSWER_CODE answer;
         lock.writeLock().lock();
         try {
@@ -532,7 +535,6 @@ public class Project implements Serializable {
         }
     }
 
-    // TODO: 18/05/21 usare gson o altro. così troppo complicato e lungo 
     private void readCardBackup(String projectPath) {
         Gson gson = new Gson();
         List<Path> result = null;
@@ -577,13 +579,6 @@ public class Project implements Serializable {
                 return;
             }
             crdList.add(crd);
-
-            /*if (!cardTextFile.equals("")){ //separo i dati della card
-                String[] cardData = cardTextFile.split("<");
-                //aggiungo la card al progetto
-                System.err.println("project->cardBck card single: "+ Arrays.toString(cardData));
-                //addCard(cardData[0],cardData[1],cardData[2],cardData[3]);
-            }*/
         }
     }
 

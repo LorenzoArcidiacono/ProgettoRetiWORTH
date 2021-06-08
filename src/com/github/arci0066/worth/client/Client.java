@@ -60,7 +60,6 @@ public class Client {
 
     // ------- UTILITÀ ----------
     private static Gson gson;
-    private static File inputFileTest;
     private static Scanner scanner;    //Per leggere le richieste da tastiera o da file di input
     static Thread daemon;
 
@@ -192,6 +191,7 @@ public class Client {
             }
         }
         try {
+            System.out.println("Provo a chiudere tutto");
             //Chiudo tutte le comunicazioni e i buffer, deregistro il client dalle callback e chiudo il thread daemon
             scanner.close();
             clientSocket.close();
@@ -201,8 +201,25 @@ public class Client {
             if(writerOut != null) writerOut.close();
             if(serverInterface != null ) serverInterface.unregisterForCallback(stub);
             for (ChatAddress ca : chatAddresses) {
+                System.out.println("chiudo");
                 ca.getMulticastSocket().close();
             }
+
+            //Chiude il Thread legato alla RMI
+            UnicastRemoteObject.unexportObject(callbackObj,true);
+
+            // TODO: 08/06/21 posso evitare 
+            chatMessages.clear();
+            userStatus.clear();
+            serverObj = null;
+            remote = null;
+            registry = null;
+            serverInterface = null;
+            callbackObj = null;
+            stub = null;
+            gson = null;
+
+
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -689,6 +706,7 @@ public class Client {
                     index = (index + 1) % chatAddresses.size();
                 }
                 System.err.println("Daemon thread: ESCO");
+                return;
             }
         };
         t.setDaemon(true);

@@ -28,6 +28,7 @@ public class Leader extends Thread {
 
     @Override
     public void run() {
+        int lastCountOp;
         while (!exit) {
             if(isInterrupted()) { //controlla se è stato inviato un segnale di interruzione e nel caso fa pulizia prima di chiudere
                 System.out.println("Leader: ricevuto segnale di interruzione");
