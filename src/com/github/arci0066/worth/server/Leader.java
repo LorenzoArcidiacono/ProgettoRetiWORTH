@@ -42,7 +42,7 @@ public class Leader extends Thread {
                 countOperation = 0;
                 pool.execute(new BackupTask()); //chiedo al pool di eseguire un task di backup
             }
-
+            lastCountOp = countOperation;
             synchronized (socketList) {
                 Iterator<Connection> iterator = socketList.iterator();
                 // TODO: 27/01/21 posso impostare un timeout? se ho pochi client giro molto a vuoto, posso cambiarlo in base al lavoro del pool o al numero di client
@@ -68,6 +68,15 @@ public class Leader extends Thread {
                     catch (IOException e) {
                         e.printStackTrace();
                     }
+                }
+            }
+
+            // TODO: 10/06/21 Ragionare se va bene così
+            if(lastCountOp == countOperation){ //se non sono state svolte operazioni aspetto
+                try {
+                    Thread.sleep( ServerSettings.SLEEP_TIMEOUT);
+                } catch (InterruptedException e) {
+                    return;
                 }
             }
         }

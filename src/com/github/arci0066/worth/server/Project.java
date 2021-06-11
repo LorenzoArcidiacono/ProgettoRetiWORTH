@@ -56,6 +56,7 @@ public class Project implements Serializable {
         toBeRevisedList = new ArrayList<>();
         doneList = new ArrayList<>();
 
+        //Apre la connessione per la chat del progetto
         try {
             this.port = port;
             this.address = address;
@@ -70,15 +71,21 @@ public class Project implements Serializable {
         lock = new ReentrantReadWriteLock();
     }
 
+    // Costruttore nel caso di progetto letto dalla memoria
     public Project(Path path, String address, int port) {
 
         todoList = new ArrayList<>();
         inProgressList = new ArrayList<>();
         toBeRevisedList = new ArrayList<>();
         doneList = new ArrayList<>();
-
+        
+        //legge la lista dei membri del progetto
         readUsersBackup(path);
+        
+        //legge la lista delle card del progetto
         readCardBackup(path.toString());
+
+        //Apre la connessione per la chat del progetto
         try {
             this.port = port;
             this.address = address;
@@ -89,8 +96,7 @@ public class Project implements Serializable {
             e.printStackTrace();
         }
         chatMsgs = new ArrayList<>();
-
-
+        
         lock = new ReentrantReadWriteLock();
     }
 
@@ -163,6 +169,14 @@ public class Project implements Serializable {
             return chatAddress;
         }
         return ANSWER_CODE.PERMISSION_DENIED.toString();
+    }
+
+    public String getChatHistory() {
+        Gson gson = new Gson();
+        String response;
+        reciveAllMessagge();
+        response = gson.toJson(chatMsgs);
+        return response;
     }
 
 // ------ Methods ------
@@ -294,6 +308,13 @@ public class Project implements Serializable {
         }
     }
 
+    /*
+    * REQUIRES: userNickname != null && userNickname registrato al progetto
+    * EFFECTS: controlla che il progetto possa essere chiuso
+    * RETURN: PERMISSION_DENIED se l'utente non fa parte del progetto
+    *           || PROJECT_NOT_FINISHED se non tutte le card sono nella lista DONE
+    *           || OP_OK altrimenti
+    */
     public ANSWER_CODE isCancellable(String userNickname) {
         if (!isUserRegisteredToProject(userNickname))
             return ANSWER_CODE.PERMISSION_DENIED;
@@ -330,16 +351,7 @@ public class Project implements Serializable {
         }
         return ANSWER_CODE.PERMISSION_DENIED.toString();
     }
-
-
-    public String getChatHistory() {
-        Gson gson = new Gson();
-        String response;
-        reciveAllMessagge();
-        response = gson.toJson(chatMsgs);
-        return response;
-    }
-
+    
 
 //    ------- Private Methods --------
 
@@ -361,7 +373,7 @@ public class Project implements Serializable {
      * EFFECTS: Cerca la card nella lista.
      * RETURN: La card se la trova, null altrimenti.
      */
-    /* Non è thread safe ma i metodi che la invocano hanno chiamato la lock */
+    /* todo Non è thread safe ma i metodi che la invocano hanno chiamato la lock */
     private Card findCardInList(String cardTitle, CARD_STATUS fromListTitle) {
         List<Card> selectedList = getList(fromListTitle);
         if (selectedList == null) return null;
@@ -374,6 +386,10 @@ public class Project implements Serializable {
         return card;
     }
 
+    /*
+    * REQUIRES: list != null
+    * RETURN: una stringa contenente le card della lista
+    */
     private String printList(List<Card> list) {
         String s = "";
         for (Card c : list) {
@@ -449,8 +465,7 @@ public class Project implements Serializable {
         }
         return selectedList;
     }
-
-
+    
     /*
      * REQUIRES: cardStatus != null
      * EFFECTS: restituisce il CARD_STATUS in base alla stringa passata
@@ -469,7 +484,6 @@ public class Project implements Serializable {
 
 
     // ---------- Closing && Backup methods -----------------
-
 
     /*
      * REQUIRES: cardList != null
@@ -535,6 +549,11 @@ public class Project implements Serializable {
         }
     }
 
+    /*
+    * REQUIRES: projectPath != null
+    * MODIFIES: this
+    * EFFECTS: legge le card dal backup del progetto e le salva nella lista corretta.
+    */
     private void readCardBackup(String projectPath) {
         Gson gson = new Gson();
         List<Path> result = null;
@@ -582,18 +601,11 @@ public class Project implements Serializable {
         }
     }
 
-    public void saveUsersList(Path userListPath) {
-        Gson gson = new Gson();
-        try {
-            BufferedWriter writer = Files.newBufferedWriter(userListPath, StandardCharsets.UTF_8);
-            writer.write(gson.toJson(projectUsers));
-            System.out.println("Project->saveUser:" + gson.toJson(projectUsers) + " anzi che " + projectUsers);
-            writer.flush();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
+    /*
+     * REQUIRES: path != null
+     * MODIFIES: projectUsers
+     * EFFECTS: legge dalla memoria la lista dei membri del progetto.
+     */
     private void readUsersBackup(Path path) {
         String usersNickname = "";
         Path nicknamePath = Paths.get(path + projectUsersBackupFile); //path del file degli utenti
@@ -612,7 +624,24 @@ public class Project implements Serializable {
         }.getType());
         System.err.println("Project-> utenti letti: " + projectUsers);
     }
+    
+    /*
+    * REQUIRES: userListPath != null
+    * EFFECTS: Scrive in memeoria la lista dei membri del progetto.
+    */
+    public void saveUsersList(Path userListPath) {
+        Gson gson = new Gson();
+        try {
+            BufferedWriter writer = Files.newBufferedWriter(userListPath, StandardCharsets.UTF_8);
+            writer.write(gson.toJson(projectUsers));
+            System.out.println("Project->saveUser:" + gson.toJson(projectUsers) + " anzi che " + projectUsers);
+            writer.flush();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
+    // TODO: 10/06/21 cancellare 
     /*
      * REQUIRES: @params != null
      * EFFECTS: inizializza gli oggetti dopo che è stato creato un progetto a partire da un backup.

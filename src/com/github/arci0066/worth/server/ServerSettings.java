@@ -9,11 +9,13 @@ public class ServerSettings {
     public static final int MAX_THREAD_NUMBER = 10; //Numero massimo di thread nel pool
     public static final long THREAD_KEEP_ALIVE_TIME = 60L; //tempo prima che un thread nel pool venga eliminato
 
+    //-------------- Leader ----------------
+    public static final int SLEEP_TIMEOUT = 200; //tempo che il leader aspetta tra due cicli di operazioni
+
     // --------- Serializzazione -----------
     public static final int MAX_UNSAVED_OPERATION = 10; //numero massimo di operazioni prima di un salvataggio
     public static final int THREAD_SAFE_NUMBER = 4; //indica pochi client e quindi un buon momento per salvare
     public static final int SAFE_UNSAVED_OPERATION = 6; //minimo numero di op. da salvare
-
 
     public static final String serverBackupDirPath = "./extra/Server_Backup"; // Path della cartella dei file di backup
     public static final String usersBackupFile = "./extra/Server_Backup/Users.bkp"; // path del file di backup utenti

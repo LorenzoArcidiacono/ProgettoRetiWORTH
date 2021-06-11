@@ -24,18 +24,30 @@ public class ChatAddress {
 
 // ------ Getters -------
 
+    /*
+    * RETURN: il titolo del progetto.
+    */
     public String getProjectTitle() {
         return projectTitle;
     }
 
+    /*
+    * RETURN: l'indirizzo del progetto.
+    */
     public InetAddress getAddress() {
         return ia;
     }
 
+    /*
+    * RETURN: la porta del progetto.
+    */
     public int getPort() {
         return port;
     }
 
+    /*
+    * RETURN: il socket multicast del progetto.
+    */
     public MulticastSocket getMulticastSocket() {
         return ms;
     }

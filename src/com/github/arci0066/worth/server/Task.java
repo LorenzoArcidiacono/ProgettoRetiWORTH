@@ -12,6 +12,7 @@ import com.github.arci0066.worth.enumeration.OP_CODE;
 import com.google.gson.Gson;
 
 import java.io.IOException;
+import java.net.SocketException;
 
 public class Task extends Thread {
     // ----- COMUNICAZIONE -----
@@ -57,9 +58,10 @@ public class Task extends Thread {
             }
             return;
         }
-
+        // TODO: 10/06/21 LOGIN non viene più inviato
         if (!user.isOnline() && !message.getOperationCode().equals(OP_CODE.LOGIN)) { //in caso il mittente risulti offline
             message.setAnswer(ANSWER_CODE.USER_OFFLINE, null);
+            // TODO: 10/06/21 in caso l'utente faccia il logout risulta offline prima che gli venga inviato un messaggio e stampa errore
             try {
                 sendAnswer();
             } catch (IOException e) {
@@ -155,7 +157,7 @@ public class Task extends Thread {
             }
         }
         // se l'operazione richiede una risposta la invia
-        if (message.getOperationCode() != OP_CODE.CLOSE_CONNECTION && message.getOperationCode() != OP_CODE.LOGOUT) {
+        if ((message.getOperationCode() != OP_CODE.CLOSE_CONNECTION) && (message.getOperationCode() != OP_CODE.LOGOUT)) {
             try {
                 //message.setAnswer(answer_code, string);
                 sendAnswer();
@@ -172,9 +174,14 @@ public class Task extends Thread {
      * EFFECTS: Invia un messaggio in risposta alla operazione svolta
      */
     private void sendAnswer() throws IOException {
-        connection.getWriter().write(gson.toJson(message) + "\n");
-        connection.getWriter().write(ServerSettings.MESSAGE_TERMINATION_CODE + "\n");
-        connection.getWriter().flush();
+        try{
+            connection.getWriter().write(gson.toJson(message) + "\n");
+            connection.getWriter().write(ServerSettings.MESSAGE_TERMINATION_CODE + "\n");
+            connection.getWriter().flush();
+        }
+        catch (SocketException e){
+            e.printStackTrace();
+        }
     }
 
 

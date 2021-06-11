@@ -40,23 +40,7 @@ public class ProjectsList  {
         lock = new ReentrantReadWriteLock();
     }
 
-    /*private ProjectsList(List<Project> oldProjects) {
-        lock = new ReentrantReadWriteLock();
-        projectsList = oldProjects;
-
-        lastUsedIP = 0;
-        lastUsedPort = ServerSettings.REGISTRY_PORT;
-
-        String suffix, address;
-
-        for (Project p : projectsList) {
-            //alloco e sistemo le variabili che non sono salvate nel file di backup
-            suffix = (++lastUsedIP).toString();
-            address = multicastIpPrefix + suffix;
-            p.resetAfterBackup(address,--lastUsedPort);
-        }
-    }*/
-
+    //Costruttore nel caso di backup
     private ProjectsList(List<Path> paths) {
         projectsList = new ArrayList<>();
         lock = new ReentrantReadWriteLock();
@@ -96,16 +80,6 @@ public class ProjectsList  {
      * EFFECTS: instanzia un oggetto singleton della classe nel caso di backup
      * RETURN: l' istanza dell' oggetto
      */
-    /*public static ProjectsList getSingletonInstance(List<Project> oldProjects) {
-        if (instance == null) {
-            synchronized (ProjectsList.class) {
-                if (instance == null)
-                    instance = new ProjectsList(oldProjects);
-            }
-        }
-        return instance;
-    }*/
-
     public static ProjectsList getSingletonInstance(List<Path> paths) {
         if (instance == null) {
             synchronized (ProjectsList.class) {
@@ -115,8 +89,7 @@ public class ProjectsList  {
         }
         return instance;
     }
-
-
+    
     /*
      * RETURN: una stringa con i titoli di tutti i progetti
      */
@@ -235,6 +208,7 @@ public class ProjectsList  {
 
     // ---------- Serialization ------------
 
+    // TODO: 10/06/21 cancellare 
     /*
      * EFFECTS: salva su un file di backup la lista dei progetti serializzata
     */
