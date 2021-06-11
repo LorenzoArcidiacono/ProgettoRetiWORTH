@@ -30,13 +30,13 @@ public class ChatMessages {
      * EFFECTS: restituisce una lista dei messaggi in memoria fino a questo momento,
      *          una volta restituiti li cancella dalla memoriaf
      * RETURN:
-    */
+     */
     public String getMessages() {
-        String response= "";
-        if(messages.isEmpty())
+        String response = "";
+        if (messages.isEmpty())
             return "\n@> - - Nessun nuovo messaggio - -\n";
-        for (String str: messages) {
-            response += str +"\n";
+        for (String str : messages) {
+            response += str + "\n";
         }
         //I messaggi già letti non dovranno essere ristampati
         messages.clear();
@@ -44,7 +44,14 @@ public class ChatMessages {
     }
 
     // ------ Methods ------
+    /*
+     * REQUIRES: message != null
+     * MODIFIES: messages
+     * EFFECTS: aggiunge message a messages
+     */
     public void add(String message) {
-        messages.add(message);
+        if (message != null) {
+            messages.add(message);
+        }
     }
 }

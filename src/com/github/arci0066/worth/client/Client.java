@@ -60,7 +60,6 @@ public class Client {
 
     // ------- UTILITÀ ----------
     private static Gson gson;
-    private static File inputFileTest;
     private static Scanner scanner;    //Per leggere le richieste da tastiera o da file di input
     static Thread daemon;
 
@@ -69,7 +68,7 @@ public class Client {
         if (args.length > 0) {
             try { // se è specificato un file usa quello come input del client
                 System.setIn(new FileInputStream(args[0]));
-                System.out.println("Leggo input da:"+ args[0]);
+                System.out.println("Leggo input da:" + args[0]);
             } catch (FileNotFoundException e) {
                 e.printStackTrace();
             }
@@ -192,17 +191,35 @@ public class Client {
             }
         }
         try {
+            System.out.println("Provo a chiudere tutto");
             //Chiudo tutte le comunicazioni e i buffer, deregistro il client dalle callback e chiudo il thread daemon
             scanner.close();
             clientSocket.close();
 
-            if(daemon != null) daemon.interrupt();
-            if(readerIn != null) readerIn.close();
-            if(writerOut != null) writerOut.close();
-            if(serverInterface != null ) serverInterface.unregisterForCallback(stub);
+            if (daemon != null) daemon.interrupt();
+            if (readerIn != null) readerIn.close();
+            if (writerOut != null) writerOut.close();
+            if (serverInterface != null) serverInterface.unregisterForCallback(stub);
             for (ChatAddress ca : chatAddresses) {
+                System.out.println("chiudo");
                 ca.getMulticastSocket().close();
             }
+
+            //Chiude il Thread legato alla RMI
+            UnicastRemoteObject.unexportObject(callbackObj, true);
+
+            // TODO: 08/06/21 posso evitare 
+            chatMessages.clear();
+            userStatus.clear();
+            serverObj = null;
+            remote = null;
+            registry = null;
+            serverInterface = null;
+            callbackObj = null;
+            stub = null;
+            gson = null;
+
+
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -400,15 +417,17 @@ public class Client {
     }
 
     /*
-     * EFFECTS: setta un messaggio per una richiesta di logout
-     * RETURN: il messaggio
+     * EFFECTS: setta un messaggio per una richiesta di logout.
+     * RETURN: il messaggio.
      */
 
     private static Message logout() {
         return new Message(nickname, null, OP_CODE.LOGOUT, null, null);
     }
 
-
+    /*
+     * EFFECTS: stampa la lista degli utenti registrati.
+     */
     private static void listUsers() {
         synchronized (userStatus) {
             System.out.println("\n@> Utenti: " + userStatus);
@@ -417,6 +436,9 @@ public class Client {
         //return new Message(nickname, null, OP_CODE.LIST_USER, null, null, null);
     }
 
+    /*
+    * EFFECTS: Stampa la lista degli utenti online.
+    */
     private static void listOnlineUsers() {
         String online = "\n@> Utenti Online:\n";
         synchronized (userStatus) {
@@ -689,6 +711,7 @@ public class Client {
                     index = (index + 1) % chatAddresses.size();
                 }
                 System.err.println("Daemon thread: ESCO");
+                return;
             }
         };
         t.setDaemon(true);

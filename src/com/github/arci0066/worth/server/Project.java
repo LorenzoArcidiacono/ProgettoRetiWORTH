@@ -1,7 +1,11 @@
 package com.github.arci0066.worth.server;
 
 import com.github.arci0066.worth.enumeration.*;
+
+import static com.github.arci0066.worth.server.ServerSettings.*;
+
 import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 
 import java.io.*;
 import java.net.DatagramPacket;
@@ -13,9 +17,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 
 //CLASSE THREAD SAFE
@@ -49,6 +56,7 @@ public class Project implements Serializable {
         toBeRevisedList = new ArrayList<>();
         doneList = new ArrayList<>();
 
+        //Apre la connessione per la chat del progetto
         try {
             this.port = port;
             this.address = address;
@@ -60,6 +68,35 @@ public class Project implements Serializable {
         }
         chatMsgs = new ArrayList<>();
 
+        lock = new ReentrantReadWriteLock();
+    }
+
+    // Costruttore nel caso di progetto letto dalla memoria
+    public Project(Path path, String address, int port) {
+
+        todoList = new ArrayList<>();
+        inProgressList = new ArrayList<>();
+        toBeRevisedList = new ArrayList<>();
+        doneList = new ArrayList<>();
+        
+        //legge la lista dei membri del progetto
+        readUsersBackup(path);
+        
+        //legge la lista delle card del progetto
+        readCardBackup(path.toString());
+
+        //Apre la connessione per la chat del progetto
+        try {
+            this.port = port;
+            this.address = address;
+            ms = new MulticastSocket(port);
+            ia = InetAddress.getByName(address);
+            ms.joinGroup(ia);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        chatMsgs = new ArrayList<>();
+        
         lock = new ReentrantReadWriteLock();
     }
 
@@ -132,6 +169,14 @@ public class Project implements Serializable {
             return chatAddress;
         }
         return ANSWER_CODE.PERMISSION_DENIED.toString();
+    }
+
+    public String getChatHistory() {
+        Gson gson = new Gson();
+        String response;
+        reciveAllMessagge();
+        response = gson.toJson(chatMsgs);
+        return response;
     }
 
 // ------ Methods ------
@@ -223,7 +268,10 @@ public class Project implements Serializable {
         // TODO: 13/05/21 potrei mettere qui il reciveMessagge(), se aggiungo un utente è probabile che voglia leggere la chat
         if (!isUserRegisteredToProject(oldUserNickname))
             return ANSWER_CODE.PERMISSION_DENIED;
-
+        //Se il nuovo utente fa già parte del progetto esco
+        if(isUserRegisteredToProject(newUserNickname)){
+            return ANSWER_CODE.EXISTING_USER;
+        }
         ANSWER_CODE answer;
         lock.writeLock().lock();
         try {
@@ -260,6 +308,13 @@ public class Project implements Serializable {
         }
     }
 
+    /*
+    * REQUIRES: userNickname != null && userNickname registrato al progetto
+    * EFFECTS: controlla che il progetto possa essere chiuso
+    * RETURN: PERMISSION_DENIED se l'utente non fa parte del progetto
+    *           || PROJECT_NOT_FINISHED se non tutte le card sono nella lista DONE
+    *           || OP_OK altrimenti
+    */
     public ANSWER_CODE isCancellable(String userNickname) {
         if (!isUserRegisteredToProject(userNickname))
             return ANSWER_CODE.PERMISSION_DENIED;
@@ -296,16 +351,7 @@ public class Project implements Serializable {
         }
         return ANSWER_CODE.PERMISSION_DENIED.toString();
     }
-
-
-    public String getChatHistory() {
-        Gson gson = new Gson();
-        String response;
-        reciveAllMessagge();
-        response = gson.toJson(chatMsgs);
-        return response;
-    }
-
+    
 
 //    ------- Private Methods --------
 
@@ -327,7 +373,7 @@ public class Project implements Serializable {
      * EFFECTS: Cerca la card nella lista.
      * RETURN: La card se la trova, null altrimenti.
      */
-    /* Non è thread safe ma i metodi che la invocano hanno chiamato la lock */
+    /* todo Non è thread safe ma i metodi che la invocano hanno chiamato la lock */
     private Card findCardInList(String cardTitle, CARD_STATUS fromListTitle) {
         List<Card> selectedList = getList(fromListTitle);
         if (selectedList == null) return null;
@@ -340,6 +386,10 @@ public class Project implements Serializable {
         return card;
     }
 
+    /*
+    * REQUIRES: list != null
+    * RETURN: una stringa contenente le card della lista
+    */
     private String printList(List<Card> list) {
         String s = "";
         for (Card c : list) {
@@ -381,7 +431,8 @@ public class Project implements Serializable {
                 String s = new String(dp.getData(), 0, dp.getLength());
                 chatMsgs.add(s);
             }
-        } catch (SocketTimeoutException e) { } //Non ci sono altri messaggi in coda quindi posso uscire.
+        } catch (SocketTimeoutException e) {
+        } //Non ci sono altri messaggi in coda quindi posso uscire.
         catch (IOException e) {
             e.printStackTrace();
         } finally {
@@ -414,8 +465,7 @@ public class Project implements Serializable {
         }
         return selectedList;
     }
-
-
+    
     /*
      * REQUIRES: cardStatus != null
      * EFFECTS: restituisce il CARD_STATUS in base alla stringa passata
@@ -434,7 +484,6 @@ public class Project implements Serializable {
 
 
     // ---------- Closing && Backup methods -----------------
-
 
     /*
      * REQUIRES: cardList != null
@@ -487,17 +536,112 @@ public class Project implements Serializable {
      */
     private void backupCard(Path path, Card crd) {
         Path cardPath;
-        cardPath = Paths.get(path + "/" + crd.getCardTitle() + ".txt");
+        Gson gson = new Gson();
+        cardPath = Paths.get(path + "/" + crd.getCardTitle() + ".crd");
         try (BufferedWriter writer = Files.newBufferedWriter(cardPath, StandardCharsets.UTF_8)) {
-            writer.write("Title: " + crd.getCardTitle() + "\n");
-            writer.write("Description: " + crd.getCardDescription() + "\n");
-            writer.write("History: " + crd.getCardHistory() + "\n");
+           /* writer.write("Title: " + crd.getCardTitle() + "<\n");
+            writer.write("Description: " + crd.getCardDescription() + "<\n");
+            writer.write("List:"+crd.getCardStatus()+"<\n");
+            writer.write("History: " + crd.getCardHistory() + "<\n");*/
+            writer.write(gson.toJson(crd));
         } catch (IOException ex) {
             ex.printStackTrace();
         }
     }
 
+    /*
+    * REQUIRES: projectPath != null
+    * MODIFIES: this
+    * EFFECTS: legge le card dal backup del progetto e le salva nella lista corretta.
+    */
+    private void readCardBackup(String projectPath) {
+        Gson gson = new Gson();
+        List<Path> result = null;
 
+        //Legge i nomi dei file nella cartella
+        try (Stream<Path> paths = Files.walk(Paths.get(projectPath), 1)) {
+            result = paths.filter(Files::isRegularFile)
+                    .collect(Collectors.toList());
+            //result.remove(Paths.get(serverBackupDirPath));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        //prende i path delle card
+        if (result != null) {
+            // TODO: 18/05/21 capire questa lambda
+            result.removeIf(path -> !(path.toString().contains(".crd")));
+        }
+        System.out.println("Project->bkpCard paths:" + result);
+
+        //Legge tutte le card e le aggiunge alla lista
+        String cardTextFile;
+        for (Path path: result) {
+            cardTextFile = "";
+            try (BufferedReader reader = Files.newBufferedReader(path)) {
+                String line;
+                while ((line = reader.readLine()) != null)
+                    cardTextFile += line;
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            System.err.println("project->cardBck card: "+cardTextFile);
+            //creo la card in base al json salvato
+            Card crd = gson.fromJson(cardTextFile, new TypeToken<Card>() {}.getType());
+            
+            //Seleziono la lista corretta e vi aggiungo la card
+            System.err.println("project->cardBck card final:"+crd);
+            List<Card> crdList = getList(crd.getCardStatus());
+            if(crdList == null){
+                // TODO: 03/06/21 eccezione
+                System.err.println("Errore "+crd+","+crd.getCardStatus() );
+                return;
+            }
+            crdList.add(crd);
+        }
+    }
+
+    /*
+     * REQUIRES: path != null
+     * MODIFIES: projectUsers
+     * EFFECTS: legge dalla memoria la lista dei membri del progetto.
+     */
+    private void readUsersBackup(Path path) {
+        String usersNickname = "";
+        Path nicknamePath = Paths.get(path + projectUsersBackupFile); //path del file degli utenti
+        Gson gson = new Gson();
+        projectTitle = path.toString().replaceAll(serverBackupDirPath + "/", ""); //Estrae il tiolo del progetto
+
+        try (BufferedReader reader = Files.newBufferedReader(nicknamePath)) {
+            String line;
+            while ((line = reader.readLine()) != null)
+                usersNickname += line;
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        //trascrive gli utenti registrati
+        projectUsers = gson.fromJson(usersNickname, new TypeToken<List<String>>() {
+        }.getType());
+        System.err.println("Project-> utenti letti: " + projectUsers);
+    }
+    
+    /*
+    * REQUIRES: userListPath != null
+    * EFFECTS: Scrive in memeoria la lista dei membri del progetto.
+    */
+    public void saveUsersList(Path userListPath) {
+        Gson gson = new Gson();
+        try {
+            BufferedWriter writer = Files.newBufferedWriter(userListPath, StandardCharsets.UTF_8);
+            writer.write(gson.toJson(projectUsers));
+            System.out.println("Project->saveUser:" + gson.toJson(projectUsers) + " anzi che " + projectUsers);
+            writer.flush();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    // TODO: 10/06/21 cancellare 
     /*
      * REQUIRES: @params != null
      * EFFECTS: inizializza gli oggetti dopo che è stato creato un progetto a partire da un backup.

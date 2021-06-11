@@ -12,12 +12,14 @@ public class BackupTask extends Thread {
         usersList = UsersList.getSingletonInstance();
     }
 
+    /*
+    * EFFECTS: avvia la serializzazione della lista utenti e dei progetti in memoria.
+    */
     @Override
     public void run() {
         System.out.println("Backup in memoria.");
-//        Serializzazioni
+//        Serializza la lista utenti
         usersList.serialize();
-        projectsList.serialize();
 
 //        Salva i progetti singolarmente in cartelle
         projectsList.saveAll();
