@@ -12,10 +12,6 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.annotations.Expose;
 
 import java.io.*;
-import java.nio.charset.Charset;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -82,20 +78,6 @@ public class UsersList {
         return str;
     }
 
-    public String getOnlineUsersNickname() {
-        String str = "Utenti Online: ";
-        lock.readLock().lock();
-        try {
-            for (User usr : usersList) {
-                if (usr.isOnline())
-                    str += "\n* " + usr.getNickname();
-            }
-        } finally {
-            lock.readLock().unlock();
-        }
-        return str;
-    }
-
     // ------ Methods ------
     public void add(User user) {
         lock.writeLock().lock();
@@ -124,22 +106,6 @@ public class UsersList {
     public String toString() {
         return "UsersList{" + usersList.toString() +
                 '}';
-    }
-
-
-    // ----------- Serialization -----------
-    public void saveAll() {
-        Path path = Paths.get(ServerSettings.usersBackupFile);
-        lock.readLock().lock();
-        try (BufferedWriter writer = Files.newBufferedWriter(path, Charset.forName("UTF-8"))) {
-            for (User user : usersList) {
-                writer.write(user.getNickname() + ServerSettings.usersDataDivider + user.getPassword() + "\n" + ServerSettings.usersDivider);
-            }
-        } catch (IOException ex) {
-            ex.printStackTrace();
-        } finally {
-            lock.readLock().unlock();
-        }
     }
 
     public void serialize() {

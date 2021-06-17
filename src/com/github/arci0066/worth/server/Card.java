@@ -1,3 +1,11 @@
+
+/*
+ *
+ * @Author Lorenzo Arcidiacono
+ * @Mail l.arcidiacono1@studenti.unipi.it
+ * @Matricola 534235
+ *
+ */
 package com.github.arci0066.worth.server;
 
 import com.github.arci0066.worth.enumeration.ANSWER_CODE;
@@ -6,7 +14,8 @@ import com.github.arci0066.worth.enumeration.CARD_STATUS;
 import java.io.Serial;
 import java.io.Serializable;
 
-public class Card implements com.github.arci0066.worth.interfaces.CardInterface, Serializable {
+// TODO: 11/06/21 Necessario serializable?
+public class Card implements Serializable {
     @Serial
     private static final long serialVersionUID = 1;
 
@@ -26,26 +35,15 @@ public class Card implements com.github.arci0066.worth.interfaces.CardInterface,
         cardStatus = CARD_STATUS.TODO;
     }
 
-    public Card(String title, String desc, CardHistory cardHistory) {
-    }
-
     //    ---------- Getters -------------
-    @Override
     public String getCardTitle() {
         return cardTitle;
     }
 
-    @Override
-    public String getCardDescription() {
-        return cardDescription;
-    }
-
-    @Override
     public CARD_STATUS getCardStatus() {
         return cardStatus;
     }
 
-    @Override
     public String getCardHistory() {
         return cardHistory.toString();
     }
@@ -57,7 +55,6 @@ public class Card implements com.github.arci0066.worth.interfaces.CardInterface,
      * EFFECTS: cambia lo status della card in base a newCardStatus e aggiorna la history della card.
      * RETURN: il codice ritorno di cardHistory.add(...)
     */
-    @Override
     public ANSWER_CODE moveAndAdjournHistory(String userNickname, CARD_STATUS newCardStatus) {
         CARD_STATUS oldCardStatus = cardStatus;
         cardStatus = newCardStatus;
@@ -68,7 +65,6 @@ public class Card implements com.github.arci0066.worth.interfaces.CardInterface,
     /*
      * EFFECTS: Svuota la history della card e la setta a null per aiutare il GC
     */
-    @Override
     public void empty() {
         cardHistory.empty();
         cardHistory = null;

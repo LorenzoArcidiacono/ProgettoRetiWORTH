@@ -1,3 +1,11 @@
+/*
+ *
+ * @Author Lorenzo Arcidiacono
+ * @Mail l.arcidiacono1@studenti.unipi.it
+ * @Matricola 534235
+ *
+ */
+
 package com.github.arci0066.worth.server;
 
 import com.github.arci0066.worth.enumeration.ANSWER_CODE;
@@ -16,7 +24,7 @@ public class CardHistory implements Serializable {
     private static final long serialVersionUID = 1;
 
     List<String> events; //Lista degli eventi della card
-    transient DateTimeFormatter dtf = null;
+    transient DateTimeFormatter dtf;
 
     //    ------ Costruttore --------
     public CardHistory(String nickname) {

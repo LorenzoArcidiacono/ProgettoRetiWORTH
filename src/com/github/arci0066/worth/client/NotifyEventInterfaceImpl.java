@@ -1,3 +1,10 @@
+/*
+ *
+ * @Author Lorenzo Arcidiacono
+ * @Mail l.arcidiacono1@studenti.unipi.it
+ * @Matricola 534235
+ *
+ */
 package com.github.arci0066.worth.client;
 
 import com.github.arci0066.worth.interfaces.NotifyEventInterface;
@@ -24,7 +31,6 @@ public class NotifyEventInterfaceImpl implements NotifyEventInterface {
     @Override
     public void notifyEvent(String value) throws RemoteException {
         List<String> userList = gson.fromJson(value, new TypeToken<List<String>>() {}.getType());
-        // TODO: 05/05/21 funziona ma costoso
         synchronized (userStatus) {
             userStatus.clear();
             userStatus.addAll(userList);

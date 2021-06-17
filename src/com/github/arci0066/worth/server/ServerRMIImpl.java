@@ -1,15 +1,19 @@
+/*
+ *
+ * @Author Lorenzo Arcidiacono
+ * @Mail l.arcidiacono1@studenti.unipi.it
+ * @Matricola 534235
+ *
+ */
 package com.github.arci0066.worth.server;
 
 import com.github.arci0066.worth.interfaces.NotifyEventInterface;
 import com.github.arci0066.worth.interfaces.ServerRMI;
-import com.google.gson.Gson;
 
 import java.rmi.RemoteException;
 import java.rmi.server.RemoteServer;
-import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 public class ServerRMIImpl extends RemoteServer implements ServerRMI {
 
@@ -40,7 +44,7 @@ public class ServerRMIImpl extends RemoteServer implements ServerRMI {
             if (clients.remove(client))
                 System.out.println("Client deregistrato dalla callback");
             else
-                System.err.println("Unable to unregister client");
+                System.err.println("Impossibile deregistrare.");
             //notifico in caso di chiusura di un client
             update(usersList.jsonString());
         }
