@@ -15,10 +15,7 @@ import java.io.Serial;
 import java.io.Serializable;
 
 // TODO: 11/06/21 Necessario serializable?
-public class Card implements Serializable {
-    @Serial
-    private static final long serialVersionUID = 1;
-
+public class Card {
     private String cardTitle;
     private String cardDescription;
     private CARD_STATUS cardStatus; //Descrittore della lista in cui si trova

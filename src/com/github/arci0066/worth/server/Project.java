@@ -156,7 +156,9 @@ public class Project implements Serializable {
         if (isUserRegisteredToProject(userNickname)) {
             lock.readLock().lock();
             try {
-                answer = getCard(cardTitle, cardStatus, userNickname).getCardHistory();
+               Card cd = getCard(cardTitle, cardStatus, userNickname);
+               if(cd != null)
+                   answer = cd.getCardHistory();
             } finally {
                 lock.readLock().unlock();
             }
@@ -199,6 +201,8 @@ public class Project implements Serializable {
         if (!isUserRegisteredToProject(userNickname))
             return ANSWER_CODE.PERMISSION_DENIED;
 
+        if (findCardInList(cardTitle,CARD_STATUS.TODO)!=null)
+            return ANSWER_CODE.EXISTING_CARD;
         Card card = new Card(cardTitle, cardDescription, userNickname);
         lock.writeLock().lock();
         try {
@@ -378,15 +382,20 @@ public class Project implements Serializable {
      * EFFECTS: Cerca la card nella lista.
      * RETURN: La card se la trova, null altrimenti.
      */
-    /* todo Non è thread safe ma i metodi che la invocano hanno chiamato la lock */
     private Card findCardInList(String cardTitle, CARD_STATUS fromListTitle) {
         List<Card> selectedList = getList(fromListTitle);
         if (selectedList == null) return null;
         Card card = null;
-        for (Card crd : selectedList) {     // Cerco la card nella lista.
-            if (crd.getCardTitle().equals(cardTitle)) {
-                card = crd;
+        lock.readLock().lock();
+        try{
+            for (Card crd : selectedList) {     // Cerco la card nella lista.
+                if (crd.getCardTitle().equals(cardTitle)) {
+                    card = crd;
+                }
             }
+        }
+        finally {
+            lock.readLock().unlock();
         }
         return card;
     }

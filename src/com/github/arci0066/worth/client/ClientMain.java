@@ -32,7 +32,7 @@ import java.util.Scanner;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 
-public class Client {
+public class ClientMain {
 
     // -------- DATI UTENTE ---------
     private static String password;
@@ -141,6 +141,7 @@ public class Client {
             daemon = daemonChatSniffer();
 
             // Loop principale in cui scegliere le operazioni
+            Message msg;
             while (!exit) {
                 if (clientSocket.isClosed()) {
                     System.err.println("Connessione chiusa");
@@ -148,7 +149,7 @@ public class Client {
                 }
 
                 //Scelgo l'operazione e setto il messaggio da inviare al server di conseguenza
-                Message msg = null;
+                msg = null;
                 printOperationMenu();
                 operazione = scegliOperazione();
                 switch (operazione) {
@@ -567,14 +568,16 @@ public class Client {
         System.out.print("Messaggio: ");
         message = scanner.next();
         message = "@" + nickname + ": " + message;
-
+        //Cerca la chat tra quelle in memoria
         chatAddress = getProjectChatAddress(projectTitle);
         if (chatAddress == null) { //Caso in cui non abbia i riferimenti del progetto in memoria
+            //Chiede i riferimenti della chat al server
             response = requestProjectChat(projectTitle);
             if (response != ANSWER_CODE.OP_OK) {
-                System.err.println("@> " + response + " Messaggio non inviato.");
+                System.out.println("@> " + response + ": Messaggio non inviato.\n");
                 return;
             }
+            //Seleziona l'indirizzo del progetto
             chatAddress = getProjectChatAddress(projectTitle);
         }
         data = message.getBytes();
@@ -586,6 +589,7 @@ public class Client {
         } catch (IOException e) {
             e.printStackTrace();
         }
+        System.out.println("@> Messaggio inviato.\n");
     }
 
     /*
@@ -600,13 +604,16 @@ public class Client {
         System.out.print("Titolo del Progetto: ");
         projectTitle = scanner.next();
 
-        //Vede se la chat è già in memoria
+        //Cerca la chat in memoria
         chatAddress = getProjectChatAddress(projectTitle);
-        if (chatAddress == null) { //Caso in cui non abbia i riferimenti del progetto in memoria li chiedo al server
+        if (chatAddress == null) { //Caso in cui non abbia i riferimenti del progetto in memoria li chiede al server
             response = requestProjectChat(projectTitle);
         }
-        if (response == ANSWER_CODE.OP_OK) { //Se ho ricevuto la chat del progetto
-            System.out.println(findProjectChat(projectTitle).getMessages());
+        if (response == ANSWER_CODE.OP_OK) { //Se ha ricevuto la chat del progetto
+            System.out.println(findProjectChat(projectTitle).getMessages()+"\n");
+        }
+        else{
+            System.out.println("@> " + response+"\n");
         }
     }
 
@@ -635,7 +642,9 @@ public class Client {
                 while (!isInterrupted()) {
                     if (chatAddresses.isEmpty()) {
                         try {
+                            //tra una richiesta e la successiva aspetta
                             Thread.sleep(1000);
+                            //controlla che non sia stato interrotto
                             continue;
                         } catch (InterruptedException e) { //Caso in cui venga interrotto durante la sleep
                             return;
@@ -646,15 +655,18 @@ public class Client {
                     DatagramPacket dp = new DatagramPacket(data, data.length);
                     empty = false;
                     try {
+                        //aspetta di ricevere i messaggi in coda se ce ne sono
                         ms.setSoTimeout(1000);
                         ms.receive(dp);
                     } catch (SocketTimeoutException | SocketException e) {
+                        //caso in cui non ci siano messaggi in coda
                         empty = true;
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
                     if (!empty) {
                         String s = new String(dp.getData(), 0, dp.getLength());
+                        //seleziona la chat del progetto
                         ChatMessages cm = findProjectChat(chat.getProjectTitle());
                         if (cm != null) {
                             cm.add(s);
@@ -709,7 +721,7 @@ public class Client {
     /*
      * REQUIRES: projectTitle != null
      * EFFECTS: invia un messaggio di richiesta al server per ricevere l'indirizzo della chat e la chat history relativa a projectTitle
-     * RETURN: la rispsorta del server.
+     * RETURN: la risposta del server.
      */
     private static ANSWER_CODE requestProjectChat(String projectTitle) {
         if (projectTitle == null) {
@@ -730,7 +742,7 @@ public class Client {
     //-------- CHIUSURA -----------
     private static void closeEverything() {
         try {
-            System.out.println("Provo a chiudere tutto");
+            System.out.println("Chiudo tutto.");
             //Chiudo tutte le comunicazioni e i buffer, deregistro il client dalle callback e chiudo il thread daemon
             scanner.close();
             clientSocket.close();

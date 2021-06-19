@@ -25,7 +25,7 @@ public class ProjectsList  {
     private List<Project> projectsList;
     ReadWriteLock lock; //variabili di mutua esclusione
 
-    private static String multicastIpPrefix = "239.0.0."; //prefisso per l'ip multicast, non cambia
+    private static String multicastIpPrefix = MULTICAST_ADDRESS_PREFIX; //prefisso per l'ip multicast, non cambia
     private Integer lastUsedIP; //suffisso per l' indirizzo ip multicast
     private int lastUsedPort; //porta per il multicast socket
 

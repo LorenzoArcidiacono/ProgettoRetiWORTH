@@ -45,6 +45,12 @@ public enum ANSWER_CODE {
             return "Card inesistente.";
         }
     },
+    EXISTING_CARD{
+        @Override
+        public String toString() {
+            return "Card precedentemente registrata.";
+        }
+    },
     WRONG_PASSWORD{
         @Override
         public String toString() {

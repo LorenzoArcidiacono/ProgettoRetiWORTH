@@ -32,7 +32,7 @@ import java.util.stream.Stream;
 
 import static com.github.arci0066.worth.server.ServerSettings.*;
 
-public class Server {
+public class ServerMain {
 
     //---------- MAIN ---------
     public static void main(String[] args) {
@@ -134,6 +134,7 @@ public class Server {
             try {
                 client = serverSocket.accept();
                 System.out.println("\nNuovo client @ " + client.getRemoteSocketAddress());
+                // TODO: 19/06/21 posso levare synch... la lista è thread safe
                 synchronized (socketList) { //aggiunge la connessione all' elenco
                     socketList.add(client);
                 }
@@ -158,7 +159,7 @@ public class Server {
              ObjectInputStream in = new ObjectInputStream(fis)) {
             registeredUsersList = (List<User>) in.readObject();
             usersList = UsersList.getSingletonInstance(registeredUsersList); //setto la lista utenti a partire dal backup
-            System.out.println("Backup utenti trovato:" + usersList.getUsersNickname());
+            System.out.println("Backup utenti trovato:\n" + usersList.getUsersNickname());
         } catch (FileNotFoundException e) {
             System.err.println("Nessun file di backup utenti trovato.");
         } catch (IOException | ClassNotFoundException ex) {
@@ -167,7 +168,7 @@ public class Server {
 
         //Leggo il backup dei progetti
         List<Path> result = null;
-        //Leggo i nomi delle cartelle
+        //Leggo i path delle cartelle
         try (Stream<Path> paths = Files.walk(Paths.get(serverBackupDirPath),1)) {
             result = paths.filter(Files::isDirectory)
                     .collect(Collectors.toList());
@@ -178,7 +179,8 @@ public class Server {
         catch (IOException e) {
             e.printStackTrace();
         }
+        //Inizializza la lista dei progetti a partire dal backup
         projectsList = ProjectsList.getSingletonInstance(result);
-        System.out.println("Backup progetti trovato: "+projectsList.getProjectsTitle());
+        System.out.println("Backup progetti trovato:\n"+projectsList.getProjectsTitle());
     }
 }
