@@ -48,7 +48,6 @@ public class ProjectsList  {
         lastUsedPort = ServerSettings.REGISTRY_PORT;
 
         String suffix, address;
-// TODO: 03/06/21 controllare che la porta e l'indirizzo non siano già in uso
         for (Path path: paths) { //crea un progetto per ogni cartella
             suffix = (++lastUsedIP).toString();
             address = multicastIpPrefix + suffix;

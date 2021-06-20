@@ -28,9 +28,6 @@ public class ServerSettings {
 
     public static final String projectUsersBackupFile = "/projectUsers.usr";  //Path degli utenti di un progetto
 
-    // TODO sembra che : e , non saranno mai usati del encoder, quindi non risultano problematici https://www.base64decode.org/
-    //public static final String usersDivider = ":";
-    //public static final String usersDataDivider = ",";
 
     //---------- Messaggi ----------
     public static final String MESSAGE_TERMINATION_CODE = "#END#"; // codice di terminazione di un messaggio sulla connessione TCP

@@ -81,7 +81,6 @@ public class ServerMain {
             server = new ServerRMIImpl();
             LocateRegistry.createRegistry(ServerSettings.REGISTRY_PORT);
             Registry registry = LocateRegistry.getRegistry(ServerSettings.REGISTRY_PORT);
-// TODO: 27/01/21 pulire il tutto e capire se posso effettivamente mandarlo nel RemoteRegistration 
             ServerRMI stub2 = (ServerRMI) UnicastRemoteObject.exportObject(server, 0);
             String name = "SERVER";
             registry.rebind(name, stub2);
@@ -134,10 +133,7 @@ public class ServerMain {
             try {
                 client = serverSocket.accept();
                 System.out.println("\nNuovo client @ " + client.getRemoteSocketAddress());
-                // TODO: 19/06/21 posso levare synch... la lista è thread safe
-                synchronized (socketList) { //aggiunge la connessione all' elenco
-                    socketList.add(client);
-                }
+                socketList.add(client); //Aggiunge il client alla lista delle connessioni aperte
             } catch (IOException e) {
                 e.printStackTrace();
             }

@@ -14,7 +14,6 @@ import com.github.arci0066.worth.enumeration.CARD_STATUS;
 import java.io.Serial;
 import java.io.Serializable;
 
-// TODO: 11/06/21 Necessario serializable?
 public class Card {
     private String cardTitle;
     private String cardDescription;

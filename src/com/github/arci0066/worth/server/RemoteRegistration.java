@@ -15,7 +15,6 @@ import java.rmi.RemoteException;
 import java.rmi.registry.Registry;
 import java.rmi.server.RemoteServer;
 
-// TODO: 22/04/21 tutta da rivedere
 public class RemoteRegistration extends RemoteServer implements RemoteRegistrationInterface {
     private UsersList usersList;
     private ServerRMIImpl server;

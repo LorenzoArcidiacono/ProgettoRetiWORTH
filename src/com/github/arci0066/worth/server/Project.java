@@ -583,7 +583,6 @@ public class Project implements Serializable {
 
         //prende i path delle card
         if (result != null) {
-            // TODO: 18/05/21 capire questa lambda
             result.removeIf(path -> !(path.toString().contains(".crd")));
         }
         //Legge tutte le card e le aggiunge alla lista
