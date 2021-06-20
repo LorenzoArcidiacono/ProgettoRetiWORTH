@@ -32,15 +32,13 @@ import java.util.stream.Stream;
 
 import static com.github.arci0066.worth.server.ServerSettings.*;
 
-public class Server {
+public class ServerMain {
 
     //---------- MAIN ---------
     public static void main(String[] args) {
         final SocketList socketList; //Lista dei descrittori delle connessioni dei client
         ThreadPoolExecutor pool; //pool di thread per gestire le richieste dei client
         Thread leader; //Thread per la gestione delle connessioni pronte a scrivere
-
-        boolean exit = false; //Stabilisce se devo uscire dal ciclo principale
 
         //Oggetti per la connessione
         final ServerSocket serverSocket;
@@ -52,7 +50,6 @@ public class Server {
         pool = new ThreadPoolExecutor(ServerSettings.MIN_THREAD_NUMBER, ServerSettings.MAX_THREAD_NUMBER, ServerSettings.THREAD_KEEP_ALIVE_TIME, TimeUnit.SECONDS, new LinkedBlockingQueue<>());
 
         //Crea la directory in cui salvo i backup se non esiste
-        // TODO: 12/05/21 spostare questo in readServerBackup()? 
         Path path = Paths.get(serverBackupDirPath);
         try {
             Files.createDirectories(path);
@@ -73,9 +70,6 @@ public class Server {
             serverSocket = new ServerSocket();
             serverSocket.bind(new InetSocketAddress(InetAddress.getLocalHost(), ServerSettings.SERVER_PORT));
             System.out.println("Aperta la connessione @ " + InetAddress.getLocalHost() + ":" + ServerSettings.SERVER_PORT);
-        } catch (UnknownHostException e) {
-            e.printStackTrace();
-            return;
         } catch (IOException e) {
             e.printStackTrace();
             return;
@@ -87,7 +81,6 @@ public class Server {
             server = new ServerRMIImpl();
             LocateRegistry.createRegistry(ServerSettings.REGISTRY_PORT);
             Registry registry = LocateRegistry.getRegistry(ServerSettings.REGISTRY_PORT);
-// TODO: 27/01/21 pulire il tutto e capire se posso effettivamente mandarlo nel RemoteRegistration 
             ServerRMI stub2 = (ServerRMI) UnicastRemoteObject.exportObject(server, 0);
             String name = "SERVER";
             registry.rebind(name, stub2);
@@ -140,9 +133,7 @@ public class Server {
             try {
                 client = serverSocket.accept();
                 System.out.println("\nNuovo client @ " + client.getRemoteSocketAddress());
-                synchronized (socketList) { //aggiunge la connessione all' elenco
-                    socketList.add(client);
-                }
+                socketList.add(client); //Aggiunge il client alla lista delle connessioni aperte
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -157,7 +148,6 @@ public class Server {
         List<User> registeredUsersList;
         UsersList usersList;
 
-        List<Project> oldProjectsList;
         ProjectsList projectsList;
 
         //Leggo il backup della lista utenti registrati
@@ -165,42 +155,28 @@ public class Server {
              ObjectInputStream in = new ObjectInputStream(fis)) {
             registeredUsersList = (List<User>) in.readObject();
             usersList = UsersList.getSingletonInstance(registeredUsersList); //setto la lista utenti a partire dal backup
-            System.out.println("Backup utenti trovato:" + usersList.getUsersNickname());
+            System.out.println("Backup utenti trovato:\n" + usersList.getUsersNickname());
         } catch (FileNotFoundException e) {
             System.err.println("Nessun file di backup utenti trovato.");
         } catch (IOException | ClassNotFoundException ex) {
             ex.printStackTrace();
         }
 
-
-        //Leggo il backup dei progetti
-        /*try (FileInputStream fis = new FileInputStream(projectsBackupFile);
-             ObjectInputStream in = new ObjectInputStream(fis)) {
-            oldProjectsList = (List<Project>) in.readObject();
-            projectsList = ProjectsList.getSingletonInstance(oldProjectsList); //setto la lista progetti a partire dal backup
-            System.out.println("Backup progetti trovato:" + projectsList.getProjectsTitle());
-        } catch (FileNotFoundException e) {
-            System.err.println("Nessun file di backup Progetti trovato.");
-        } catch (IOException | ClassNotFoundException ex) {
-            ex.printStackTrace();
-        }*/
-
         //Leggo il backup dei progetti
         List<Path> result = null;
-        //Leggo i nomi delle cartelle
+        //Leggo i path delle cartelle
         try (Stream<Path> paths = Files.walk(Paths.get(serverBackupDirPath),1)) {
             result = paths.filter(Files::isDirectory)
                     .collect(Collectors.toList());
             result.remove(Paths.get(serverBackupDirPath));
-        } catch (IOException e) {
+        } catch (FileNotFoundException e){
+            System.err.println("Nessun file di backup dei progetti trovato.");
+        }
+        catch (IOException e) {
             e.printStackTrace();
         }
-        System.out.println("Server -> progetti: "+result);
-       /* for (Path proj: result) {
-            String pName = proj.toString().replaceAll(serverBackupDirPath+"/","");
-            System.out.println(pName);
-        }*/
+        //Inizializza la lista dei progetti a partire dal backup
         projectsList = ProjectsList.getSingletonInstance(result);
-        System.out.println("Server->PrjList: "+projectsList.getProjectsTitle());
+        System.out.println("Backup progetti trovato:\n"+projectsList.getProjectsTitle());
     }
 }

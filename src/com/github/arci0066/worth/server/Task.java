@@ -49,8 +49,7 @@ public class Task extends Thread {
 
         User user = findUserByNickname(message.getSenderNickname());
         if (user == null) {
-            System.err.println("Task: Utente inesistente");
-            message.setAnswer(ANSWER_CODE.OP_FAIL,null);
+            message.setAnswer(ANSWER_CODE.OP_FAIL, null);
             try {
                 sendAnswer();
             } catch (IOException e) {
@@ -58,17 +57,16 @@ public class Task extends Thread {
             }
             return;
         }
-        // TODO: 10/06/21 LOGIN non viene più inviato
-        if (!user.isOnline() && !message.getOperationCode().equals(OP_CODE.LOGIN)) { //in caso il mittente risulti offline
+        if (!user.isOnline() && (!message.getOperationCode().equals(OP_CODE.LOGIN)
+                && !message.getOperationCode().equals(OP_CODE.LOGOUT))) { //in caso il mittente risulti offline
             message.setAnswer(ANSWER_CODE.USER_OFFLINE, null);
-            // TODO: 10/06/21 in caso l'utente faccia il logout risulta offline prima che gli venga inviato un messaggio e stampa errore
             try {
                 sendAnswer();
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
-        System.out.println("Messaggio ricevuto: " + message);
+        System.out.println("@" + connection.getSocket() + "-> " + message);
 
         ANSWER_CODE answer_code = ANSWER_CODE.OP_OK;
         String string = message.getExtra();
@@ -88,14 +86,6 @@ public class Task extends Thread {
                 }
                 break;
             }
-            /*case LIST_USER: {
-                string = listUsers();
-                break;
-            }
-            case LIST_ONLINE_USER: {
-                string = listOnlineUsers();
-                break;
-            }*/
             case LIST_PROJECTS: {
                 message = listProjects(message);
                 break;
@@ -137,23 +127,16 @@ public class Task extends Thread {
                 break;
             }
             case GET_PRJ_CHAT: {
-                message = getProjectChat(message); // TODO: 13/05/21 provare a levare message = ... e vedere se funziona 
+                message = getProjectChat(message);
                 break;
             }
             case GET_CHAT_HST: {
                 message = getChatHistory(message);
                 break;
             }
-            /*case CLOSE_CONNECTION: {
-                try {
-                    connection.close();
-                    registeredUsersList.findUser(message.getSenderNickname()).logout(); // TODO: 30/04/21 Se l'utente non esiste NullPointerException
-                } catch (IOException | NullPointerException e) {
-                    e.printStackTrace();
-                }
-            }*/
+
             default: {
-                message.setAnswer(ANSWER_CODE.OP_FAIL,null);
+                message.setAnswer(ANSWER_CODE.OP_FAIL, null);
             }
         }
         // se l'operazione richiede una risposta la invia
@@ -174,12 +157,11 @@ public class Task extends Thread {
      * EFFECTS: Invia un messaggio in risposta alla operazione svolta
      */
     private void sendAnswer() throws IOException {
-        try{
+        try {
             connection.getWriter().write(gson.toJson(message) + "\n");
             connection.getWriter().write(ServerSettings.MESSAGE_TERMINATION_CODE + "\n");
             connection.getWriter().flush();
-        }
-        catch (SocketException e){
+        } catch (SocketException e) {
             e.printStackTrace();
         }
     }
@@ -194,8 +176,6 @@ public class Task extends Thread {
         while (!end && (connectionMessage = connection.getReader().readLine()) != null) {
             if (!connectionMessage.contains(ServerSettings.MESSAGE_TERMINATION_CODE)) {
                 read += connectionMessage;
-
-                //read = read.replace("END","");
             } else
                 end = true;
             //break;
@@ -204,8 +184,6 @@ public class Task extends Thread {
     }
 
     // ------ Methods ------
-    // TODO: 22/01/21 quando ritorno project e poi ci lavoro sopra è thread safe?
-    // TODO: 22/01/21 leggere la lista degli utenti mi richiede più tempo di calcolo ma evita di prendere due lock nel caso l'utente non esista?
     /*
      * REQUIRES: Strings != null, nickname già registrato, password corretta
      * EFFECTS: se l'utente è registrato viene segnato come online
@@ -257,32 +235,15 @@ public class Task extends Thread {
     }
 
     /*
-     * REQUIRES:
-     * EFFECTS: Restituisce la lista degli utenti registrati
-     * RETURN: Una stringa contenente i nickname degli utenti registrati
-     */
-    //Meglio se restituisse una List? No lui non deve manipolare nulla
-    /*public String listUsers() {
-        return registeredUsersList.getUsersNickname();
-    }*/
-
-    /*
-     * REQUIRES:
-     * EFFECTS: Restituisce la lista degli utenti online al momento
-     * RETURN: Una stringa contenente i nickname degli utenti online
-     */
-    //Meglio se restituisse una List? No lui non deve manipolare nulla
- /*   public String listOnlineUsers() {
-        return registeredUsersList.getOnlineUsersNickname();
-    }*/
-
-
-    /*
      * EFFECTS: Restituisce la lista dei progetti di cui l'utente è membro
      * RETURN: Una stringa contenente i nomi dei progetti
      */
     //Meglio se restituisse una List?
     public Message listProjects(Message msg) {
+        if (projectsList.isEmpty()) {
+            msg.setAnswer(ANSWER_CODE.OP_OK, "Nessun Progetto Esistente.");
+            return msg;
+        }
         String answer = projectsList.getProjectsTitle();
         msg.setAnswer(ANSWER_CODE.OP_OK, answer);
         return msg;
@@ -374,7 +335,6 @@ public class Task extends Thread {
             msg.setAnswer(ANSWER_CODE.UNKNOWN_PROJECT, null);
             return msg;
         }
-        //todo se si bloccasse qui e qualcuno aggiungesse un User? devo bloccare il progetto?  è solo una copia?
         msg.setAnswer(ANSWER_CODE.OP_OK, prj.getProjectUsers(userNickname));
         return msg;
     }
@@ -524,7 +484,12 @@ public class Task extends Thread {
 
         Project prj = findProjectByTitle(projectTitle);
         if (prj != null) {
-            msg.setAnswer(ANSWER_CODE.OP_OK, prj.getCardHistory(cardTitle, cardStatus, userNickname));
+            String cardHistory = prj.getCardHistory(cardTitle, cardStatus, userNickname);
+            if (cardHistory == null) {
+                msg.setAnswer(ANSWER_CODE.UNKNOWN_CARD, null);
+                return msg;
+            }
+            msg.setAnswer(ANSWER_CODE.OP_OK, cardHistory);
             return msg;
         }
         msg.setAnswer(ANSWER_CODE.UNKNOWN_PROJECT, null);
@@ -607,7 +572,7 @@ public class Task extends Thread {
         }
 
         Project prj = findProjectByTitle(projectTitle);
-        if (prj != null) { // TODO: 03/05/21 pulire
+        if (prj != null) {
             msg.setAnswer(projectsList.remove(prj, userNickname), null);
             return msg;
         }
@@ -637,7 +602,6 @@ public class Task extends Thread {
      * REQUIRES: userNickname != null
      * RETURN: se esiste l'utente con nickname == userNickname, null altrimenti
      */
-    // TODO: 17/05/21 potrei cambiare in find user in project, cercando subito di capire se l'utente è membro del progetto 
     private User findUserByNickname(String userNickname) {
         return registeredUsersList.findUser(userNickname);
     }

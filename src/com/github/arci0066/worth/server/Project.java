@@ -1,3 +1,10 @@
+/*
+ *
+ * @Author Lorenzo Arcidiacono
+ * @Mail l.arcidiacono1@studenti.unipi.it
+ * @Matricola 534235
+ *
+ */
 package com.github.arci0066.worth.server;
 
 import com.github.arci0066.worth.enumeration.*;
@@ -73,7 +80,7 @@ public class Project implements Serializable {
 
     // Costruttore nel caso di progetto letto dalla memoria
     public Project(Path path, String address, int port) {
-
+        projectTitle = path.toString().replaceAll(serverBackupDirPath+"/","");
         todoList = new ArrayList<>();
         inProgressList = new ArrayList<>();
         toBeRevisedList = new ArrayList<>();
@@ -149,7 +156,9 @@ public class Project implements Serializable {
         if (isUserRegisteredToProject(userNickname)) {
             lock.readLock().lock();
             try {
-                answer = getCard(cardTitle, cardStatus, userNickname).getCardHistory();
+               Card cd = getCard(cardTitle, cardStatus, userNickname);
+               if(cd != null)
+                   answer = cd.getCardHistory();
             } finally {
                 lock.readLock().unlock();
             }
@@ -192,6 +201,8 @@ public class Project implements Serializable {
         if (!isUserRegisteredToProject(userNickname))
             return ANSWER_CODE.PERMISSION_DENIED;
 
+        if (findCardInList(cardTitle,CARD_STATUS.TODO)!=null)
+            return ANSWER_CODE.EXISTING_CARD;
         Card card = new Card(cardTitle, cardDescription, userNickname);
         lock.writeLock().lock();
         try {
@@ -265,7 +276,6 @@ public class Project implements Serializable {
      *			|| OP_FAIL altrimenti.
      */
     public ANSWER_CODE addUser(String oldUserNickname, String newUserNickname) {
-        // TODO: 13/05/21 potrei mettere qui il reciveMessagge(), se aggiungo un utente è probabile che voglia leggere la chat
         if (!isUserRegisteredToProject(oldUserNickname))
             return ANSWER_CODE.PERMISSION_DENIED;
         //Se il nuovo utente fa già parte del progetto esco
@@ -334,7 +344,6 @@ public class Project implements Serializable {
      *          || PERMISSION_DENIED altrimenti
      */
     public String showCards(String userNickname) {
-        // TODO: 13/05/21 potrei mettere qui il reciveMessagge(), se vedo le card magari voglio chiedere informazioni
         String answer;
         if (isUserRegisteredToProject(userNickname)) {
             lock.readLock().lock();
@@ -373,15 +382,20 @@ public class Project implements Serializable {
      * EFFECTS: Cerca la card nella lista.
      * RETURN: La card se la trova, null altrimenti.
      */
-    /* todo Non è thread safe ma i metodi che la invocano hanno chiamato la lock */
     private Card findCardInList(String cardTitle, CARD_STATUS fromListTitle) {
         List<Card> selectedList = getList(fromListTitle);
         if (selectedList == null) return null;
         Card card = null;
-        for (Card crd : selectedList) {     // Cerco la card nella lista.
-            if (crd.getCardTitle().equals(cardTitle)) {
-                card = crd;
+        lock.readLock().lock();
+        try{
+            for (Card crd : selectedList) {     // Cerco la card nella lista.
+                if (crd.getCardTitle().equals(cardTitle)) {
+                    card = crd;
+                }
             }
+        }
+        finally {
+            lock.readLock().unlock();
         }
         return card;
     }
@@ -418,7 +432,7 @@ public class Project implements Serializable {
      * EFFECTS: legge tutti i messaggi inviati sulla chat del progetto dall'ultima invocazione di questo metodo
      *          e li salva in memoria
      */
-    private void reciveAllMessagge() { // TODO: 11/05/21 capire dove e quando chiamarla
+    private void reciveAllMessagge() {
         boolean done = false;
         byte[] data = new byte[1024];
         DatagramPacket dp = new DatagramPacket(data, data.length);
@@ -569,11 +583,8 @@ public class Project implements Serializable {
 
         //prende i path delle card
         if (result != null) {
-            // TODO: 18/05/21 capire questa lambda
             result.removeIf(path -> !(path.toString().contains(".crd")));
         }
-        System.out.println("Project->bkpCard paths:" + result);
-
         //Legge tutte le card e le aggiunge alla lista
         String cardTextFile;
         for (Path path: result) {
@@ -585,16 +596,13 @@ public class Project implements Serializable {
             } catch (IOException e) {
                 e.printStackTrace();
             }
-            System.err.println("project->cardBck card: "+cardTextFile);
             //creo la card in base al json salvato
             Card crd = gson.fromJson(cardTextFile, new TypeToken<Card>() {}.getType());
             
             //Seleziono la lista corretta e vi aggiungo la card
-            System.err.println("project->cardBck card final:"+crd);
             List<Card> crdList = getList(crd.getCardStatus());
             if(crdList == null){
-                // TODO: 03/06/21 eccezione
-                System.err.println("Errore "+crd+","+crd.getCardStatus() );
+                System.err.println("Errore lista sbagliata:"+crd+","+crd.getCardStatus() );
                 return;
             }
             crdList.add(crd);
@@ -622,7 +630,6 @@ public class Project implements Serializable {
         //trascrive gli utenti registrati
         projectUsers = gson.fromJson(usersNickname, new TypeToken<List<String>>() {
         }.getType());
-        System.err.println("Project-> utenti letti: " + projectUsers);
     }
     
     /*
@@ -634,30 +641,9 @@ public class Project implements Serializable {
         try {
             BufferedWriter writer = Files.newBufferedWriter(userListPath, StandardCharsets.UTF_8);
             writer.write(gson.toJson(projectUsers));
-            System.out.println("Project->saveUser:" + gson.toJson(projectUsers) + " anzi che " + projectUsers);
             writer.flush();
         } catch (IOException e) {
             e.printStackTrace();
         }
-    }
-
-    // TODO: 10/06/21 cancellare 
-    /*
-     * REQUIRES: @params != null
-     * EFFECTS: inizializza gli oggetti dopo che è stato creato un progetto a partire da un backup.
-     */
-    public void resetAfterBackup(String address, int port) {
-        try {
-            this.port = port;
-            this.address = address;
-            ms = new MulticastSocket(port);
-            ia = InetAddress.getByName(address);
-            ms.joinGroup(ia);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        chatMsgs = new ArrayList<>();
-        lock = new ReentrantReadWriteLock();
-
     }
 }

@@ -25,7 +25,7 @@ public class ProjectsList  {
     private List<Project> projectsList;
     ReadWriteLock lock; //variabili di mutua esclusione
 
-    private static String multicastIpPrefix = "239.0.0."; //prefisso per l'ip multicast, non cambia
+    private static String multicastIpPrefix = MULTICAST_ADDRESS_PREFIX; //prefisso per l'ip multicast, non cambia
     private Integer lastUsedIP; //suffisso per l' indirizzo ip multicast
     private int lastUsedPort; //porta per il multicast socket
 
@@ -48,9 +48,7 @@ public class ProjectsList  {
         lastUsedPort = ServerSettings.REGISTRY_PORT;
 
         String suffix, address;
-// TODO: 03/06/21 controllare che la porta e l'indirizzo non siano già in uso
         for (Path path: paths) { //crea un progetto per ogni cartella
-            String projectName = path.toString().replaceAll(serverBackupDirPath+"/","");
             suffix = (++lastUsedIP).toString();
             address = multicastIpPrefix + suffix;
             projectsList.add(new Project(path,address,--lastUsedPort));
@@ -126,7 +124,7 @@ public class ProjectsList  {
             return;
         }
 
-        System.out.println("Indirizzo chat del progetto"+projectTitle+":"+address+":"+(lastUsedPort));
+        System.out.println("Indirizzo chat del progetto "+projectTitle+": "+address+":"+(lastUsedPort));
         lock.writeLock().lock();
         try {
             projectsList.add(new Project(projectTitle,userNickname,address,lastUsedPort));
@@ -185,6 +183,13 @@ public class ProjectsList  {
         return project;
     }
 
+    /*
+    * RETURN: true se la lista dei progetti è vuota, false altrimenti.
+    */
+    public boolean isEmpty() {
+        return projectsList.isEmpty();
+    }
+
     //---------- METODI PRIVATI -----------
 
     /*
@@ -195,7 +200,6 @@ public class ProjectsList  {
         if(file == null)
             return;
         File[] contents = file.listFiles();
-        System.err.println("PrjList -> deleteDir(): "+contents);
         if (contents != null) {
             for (File f : contents) {
                 if (! Files.isSymbolicLink(f.toPath())) {
@@ -207,22 +211,6 @@ public class ProjectsList  {
     }
 
     // ---------- Serialization ------------
-
-    // TODO: 10/06/21 cancellare 
-    /*
-     * EFFECTS: salva su un file di backup la lista dei progetti serializzata
-    */
-    public void serialize() {
-        lock.readLock().lock();
-        try (FileOutputStream fos = new FileOutputStream(projectsBackupFile);
-             ObjectOutputStream out = new ObjectOutputStream(fos)) {
-            out.writeObject(projectsList);
-        } catch (IOException ex) {
-            ex.printStackTrace();
-        } finally {
-            lock.readLock().unlock();
-        }
-    }
 
     /*
      * EFFECTS: salva in memoria la lista dei progetti: una cartella per ogni progetto, un file per ogni card
@@ -246,5 +234,7 @@ public class ProjectsList  {
             lock.readLock().unlock();
         }
     }
+
+
 }
 

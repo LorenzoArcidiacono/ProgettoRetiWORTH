@@ -1,3 +1,10 @@
+/*
+ *
+ * @Author Lorenzo Arcidiacono
+ * @Mail l.arcidiacono1@studenti.unipi.it
+ * @Matricola 534235
+ *
+ */
 package com.github.arci0066.worth.enumeration;
 
 // Possibili risposte ricevute dal server
@@ -35,7 +42,13 @@ public enum ANSWER_CODE {
     UNKNOWN_CARD{
         @Override
         public String toString() {
-            return "Card insesistente.";
+            return "Card inesistente.";
+        }
+    },
+    EXISTING_CARD{
+        @Override
+        public String toString() {
+            return "Card precedentemente registrata.";
         }
     },
     WRONG_PASSWORD{

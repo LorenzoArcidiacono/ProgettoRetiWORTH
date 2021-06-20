@@ -1,15 +1,19 @@
+/*
+ *
+ * @Author Lorenzo Arcidiacono
+ * @Mail l.arcidiacono1@studenti.unipi.it
+ * @Matricola 534235
+ *
+ */
 package com.github.arci0066.worth.server;
 
 import com.github.arci0066.worth.interfaces.NotifyEventInterface;
 import com.github.arci0066.worth.interfaces.ServerRMI;
-import com.google.gson.Gson;
 
 import java.rmi.RemoteException;
 import java.rmi.server.RemoteServer;
-import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 public class ServerRMIImpl extends RemoteServer implements ServerRMI {
 
@@ -23,27 +27,28 @@ public class ServerRMIImpl extends RemoteServer implements ServerRMI {
         clients = new ArrayList<>();
     }
 
-    public synchronized void registerForCallback (NotifyEventInterface clientInterface) throws RemoteException {
+    public synchronized void registerForCallback(NotifyEventInterface clientInterface) throws RemoteException {
         if (!clients.contains(clientInterface)) {
             clients.add(clientInterface);
             System.out.println("Nuovo client registrato per la callback.");
 
-            // TODO: 12/04/21 capire se va bene così, funziona
-            String registeredUserList = usersList.jsonString(); // TODO: 09/04/21 Meglio così o json?
+            String registeredUserList = usersList.jsonString();
             update(registeredUserList);
         }
     }
 
 
-        @Override
-        public void unregisterForCallback (NotifyEventInterface client) throws RemoteException {
-            if (clients.remove(client))
-                System.out.println("Client deregistrato dalla callback");
-            else
-                System.err.println("Unable to unregister client");
-            //notifico in caso di chiusura di un client
-            update(usersList.jsonString());
-        }
+    @Override
+    public void unregisterForCallback(NotifyEventInterface client) throws RemoteException {
+        if (!clients.contains(client))
+            return;
+        if (clients.remove(client))
+            System.out.println("Client deregistrato dalla callback");
+        else
+            System.err.println("Impossibile deregistrare.");
+        //notifico in caso di chiusura di un client
+        update(usersList.jsonString());
+    }
 
 
     /* notifica di una variazione di valore dell'azione
@@ -67,4 +72,4 @@ registrati */
 // ------ Setters -------
 
 // ------ Methods ------
-    }
+}

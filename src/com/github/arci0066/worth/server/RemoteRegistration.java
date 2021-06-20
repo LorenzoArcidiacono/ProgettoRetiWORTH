@@ -1,3 +1,11 @@
+/*
+ *
+ * @Author Lorenzo Arcidiacono
+ * @Mail l.arcidiacono1@studenti.unipi.it
+ * @Matricola 534235
+ *
+ */
+
 package com.github.arci0066.worth.server;
 
 import com.github.arci0066.worth.enumeration.ANSWER_CODE;
@@ -7,7 +15,6 @@ import java.rmi.RemoteException;
 import java.rmi.registry.Registry;
 import java.rmi.server.RemoteServer;
 
-// TODO: 22/04/21 tutta da rivedere
 public class RemoteRegistration extends RemoteServer implements RemoteRegistrationInterface {
     private UsersList usersList;
     private ServerRMIImpl server;

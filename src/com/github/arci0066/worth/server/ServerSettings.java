@@ -1,6 +1,11 @@
+/*
+ *
+ * @Author Lorenzo Arcidiacono
+ * @Mail l.arcidiacono1@studenti.unipi.it
+ * @Matricola 534235
+ *
+ */
 package com.github.arci0066.worth.server;
-
-import java.net.InetAddress;
 
 public class ServerSettings {
 
@@ -19,22 +24,20 @@ public class ServerSettings {
 
     public static final String serverBackupDirPath = "./extra/Server_Backup"; // Path della cartella dei file di backup
     public static final String usersBackupFile = "./extra/Server_Backup/Users.bkp"; // path del file di backup utenti
-    public static final String projectsBackupFile = "./extra/Server_Backup/Projects.bkp"; // path del file di backup dei progetti
+    //public static final String projectsBackupFile = "./tmp/Server_Backup/Projects.bkp"; // path del file di backup dei progetti
 
     public static final String projectUsersBackupFile = "/projectUsers.usr";  //Path degli utenti di un progetto
 
-    // TODO sembra che : e , non saranno mai usati del encoder, quindi non risultano problematici https://www.base64decode.org/
-    public static final String usersDivider = ":";
-    public static final String usersDataDivider = ",";
 
     //---------- Messaggi ----------
-    public static final String MESSAGE_TERMINATION_CODE = "END"; // codice di terminazione di un messaggio sulla connessione TCP
+    public static final String MESSAGE_TERMINATION_CODE = "#END#"; // codice di terminazione di un messaggio sulla connessione TCP
 
     //---------------- Connessioni ---------------
     public static final int SERVER_PORT = 65535; // Porta del server
     public static final int REGISTRY_PORT = 65534; // Porta per la RMI
     public static final String REGISRTY_OP_NAME = "SERVER_REGISTRATION"; // Nome della RMI
 
+    public static final String MULTICAST_ADDRESS_PREFIX = "239.0.0."; //Prefisso per gli indirizzi multicast dei progetti
     public  static final int MULTICAST_MSG_WAITING = 100; //Tempo di attesa su una connessione UDP multicast
 
     //IP multicast unassigned 233.252.1.32-233.252.1.255 o 239.0.0.0-239.255.255.255

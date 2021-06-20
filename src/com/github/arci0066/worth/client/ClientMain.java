@@ -32,7 +32,7 @@ import java.util.Scanner;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 
-public class Client {
+public class ClientMain {
 
     // -------- DATI UTENTE ---------
     private static String password;
@@ -63,7 +63,7 @@ public class Client {
     private static Scanner scanner;    //Per leggere le richieste da tastiera o da file di input
     static Thread daemon;
 
-    public static void main(String[] args) { // TODO: 13/05/21 impostare un thread che anche in caso di chiusura inaspettata chiuda la connessione per evitare errori nel server
+    public static void main(String[] args) {
 
         if (args.length > 0) {
             try { // se è specificato un file usa quello come input del client
@@ -81,7 +81,8 @@ public class Client {
 
         //Uso CopyOnWriteArrayList perchè sia thread safe
         chatAddresses = new CopyOnWriteArrayList<>();
-        chatMessages = new CopyOnWriteArrayList<>(); // TODO: 26/04/21 Qui in realtà molte scritture poche letture ma aggiunge più messaggi in un colpo solo... synchronize??
+        chatMessages = new CopyOnWriteArrayList<>();
+
 
         //Primo menu per la scelta di come accedere
         int operazione;
@@ -140,6 +141,7 @@ public class Client {
             daemon = daemonChatSniffer();
 
             // Loop principale in cui scegliere le operazioni
+            Message msg;
             while (!exit) {
                 if (clientSocket.isClosed()) {
                     System.err.println("Connessione chiusa");
@@ -147,11 +149,10 @@ public class Client {
                 }
 
                 //Scelgo l'operazione e setto il messaggio da inviare al server di conseguenza
-                Message msg = null;
+                msg = null;
                 printOperationMenu();
                 operazione = scegliOperazione();
                 switch (operazione) {
-                    //case 1 -> msg = login(); // TODO: 23/01/21 posso eliminarlo
                     case 1 -> {
                         msg = logout();
                         exit = true;
@@ -170,14 +171,7 @@ public class Client {
                     case 13 -> sendChatMessage();
                     case 14 -> receiveChatMessages();
                     case 15 -> msg = cancelProject();
-                    /*case 17 -> {
-                        exit = true;
-                        msg = closeConnection();
-                    }*/
-                    default -> {
-                        System.out.println("\n@> Scelta non valida.\n");
-                        //continue;
-                    }
+                    default -> System.out.println("\n@> Scelta non valida.\n");
                 }
 
                 //Caso di operazione tramite messaggio TCP
@@ -190,41 +184,10 @@ public class Client {
 
             }
         }
-        try {
-            System.out.println("Provo a chiudere tutto");
-            //Chiudo tutte le comunicazioni e i buffer, deregistro il client dalle callback e chiudo il thread daemon
-            scanner.close();
-            clientSocket.close();
-
-            if (daemon != null) daemon.interrupt();
-            if (readerIn != null) readerIn.close();
-            if (writerOut != null) writerOut.close();
-            if (serverInterface != null) serverInterface.unregisterForCallback(stub);
-            for (ChatAddress ca : chatAddresses) {
-                System.out.println("chiudo");
-                ca.getMulticastSocket().close();
-            }
-
-            //Chiude il Thread legato alla RMI
-            UnicastRemoteObject.unexportObject(callbackObj, true);
-
-            // TODO: 08/06/21 posso evitare 
-            chatMessages.clear();
-            userStatus.clear();
-            serverObj = null;
-            remote = null;
-            registry = null;
-            serverInterface = null;
-            callbackObj = null;
-            stub = null;
-            gson = null;
-
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        closeEverything();
         System.out.println("Esco dal programma.");
     }
+
 
     //--------- CONNESSIONE COL SERVER ---------
 
@@ -295,7 +258,7 @@ public class Client {
                 System.out.println("\n@> " + answer.getAnswerCode() + "\n");
                 //Stampo le informazioni contenute in extra quando necessario
                 if (answer.getAnswerCode().equals(ANSWER_CODE.OP_OK)) {
-                    System.out.println("\n@> " + answer.getExtra() + "\n");
+                    System.out.println("@> " + answer.getExtra() + "\n");
                 }
                 break;
             }
@@ -307,7 +270,7 @@ public class Client {
             case GET_PRJ_CHAT: {
                 if (answer.getAnswerCode().equals(ANSWER_CODE.OP_OK)) {
                     if (answer.getExtra().equals(ANSWER_CODE.PERMISSION_DENIED.toString())) {
-                        System.out.println("\n@> " + answer.getExtra() + "\n");
+                        System.out.println("@> " + answer.getExtra() + "\n");
                         return ANSWER_CODE.PERMISSION_DENIED;
                     } else {
                         try {
@@ -361,7 +324,6 @@ public class Client {
      */
     private static void printOperationMenu() {
         System.out.println("Scegli operazione:" +
-                "\n -1.  Login Utente," +
                 "\n 1.  Logout Utente," +
                 "\n 2.  Vedi Lista Utenti Registrati," +
                 "\n 3.  Vedi Lista Utenti Online," +
@@ -376,8 +338,7 @@ public class Client {
                 "\n 12. Vedi la History della Card," +
                 "\n 13. Invia un Messaggio in una Chat," +
                 "\n 14. Leggi la Chat del Progetto," +
-                "\n 15. Cancella un Progetto," +
-                "\n -1. Esci."); // TODO: 06/05/21 levare esci
+                "\n 15. Cancella un Progetto,");
     }
 
     //------ POSSIBILI OPERAZIONI RICHIESTE ------
@@ -430,15 +391,13 @@ public class Client {
      */
     private static void listUsers() {
         synchronized (userStatus) {
-            System.out.println("\n@> Utenti: " + userStatus);
+            System.out.println("\n@> Utenti:\n" + userStatus);
         }
-        // TODO: 05/05/21 eliminarlo da Task
-        //return new Message(nickname, null, OP_CODE.LIST_USER, null, null, null);
     }
 
     /*
-    * EFFECTS: Stampa la lista degli utenti online.
-    */
+     * EFFECTS: Stampa la lista degli utenti online.
+     */
     private static void listOnlineUsers() {
         String online = "\n@> Utenti Online:\n";
         synchronized (userStatus) {
@@ -449,8 +408,6 @@ public class Client {
             }
         }
         System.out.println(online);
-        // TODO: 05/05/21 eliminarlo da Task
-        //return new Message(nickname, null, OP_CODE.LIST_ONLINE_USER, null, null, null);
     }
 
     /*
@@ -523,7 +480,7 @@ public class Client {
         projectTitle = scanner.next();
         System.out.print("Inserire il nome della Card:");
         card = scanner.next();
-        System.out.print("Inserire lista in cui si trova [todo, inprogress, toberevised, done]:"); // TODO: 25/01/21 Migliorare scelta lista!
+        System.out.print("Inserire lista in cui si trova [todo, inprogress, toberevised, done]:");
         extra = scanner.next();
         return new Message(nickname, extra, OP_CODE.SHOW_CARD, projectTitle, card);
     }
@@ -560,7 +517,7 @@ public class Client {
         projectTitle = scanner.next();
         System.out.print("Inserire il nome della Card:");
         card = scanner.next();
-        System.out.print("Titolo lista di partenza [todo, inprogress, toberevised, done]:"); // TODO: 25/01/21 Migliorare scelta lista!
+        System.out.print("Titolo lista di partenza [todo, inprogress, toberevised, done]:");
         extra = scanner.next();
         extra += "->";
         System.out.print("Titolo lista di destinazione [inprogress, toberevised, done]:");
@@ -611,14 +568,16 @@ public class Client {
         System.out.print("Messaggio: ");
         message = scanner.next();
         message = "@" + nickname + ": " + message;
-
+        //Cerca la chat tra quelle in memoria
         chatAddress = getProjectChatAddress(projectTitle);
         if (chatAddress == null) { //Caso in cui non abbia i riferimenti del progetto in memoria
+            //Chiede i riferimenti della chat al server
             response = requestProjectChat(projectTitle);
             if (response != ANSWER_CODE.OP_OK) {
-                System.err.println("@> " + response + " Messaggio non inviato.");
+                System.out.println("@> " + response + ": Messaggio non inviato.\n");
                 return;
             }
+            //Seleziona l'indirizzo del progetto
             chatAddress = getProjectChatAddress(projectTitle);
         }
         data = message.getBytes();
@@ -630,6 +589,7 @@ public class Client {
         } catch (IOException e) {
             e.printStackTrace();
         }
+        System.out.println("@> Messaggio inviato.\n");
     }
 
     /*
@@ -637,23 +597,23 @@ public class Client {
      *          altrimenti richiedo l'indirizzo della chat e ricevo anche i messaggi dal server.
      */
     private static void receiveChatMessages() {
-        String projectTitle, message;
+        String projectTitle;
         ANSWER_CODE response = ANSWER_CODE.OP_OK;
         ChatAddress chatAddress;
-        byte[] data;
-        DatagramPacket dp;
-        MulticastSocket ms;
 
         System.out.print("Titolo del Progetto: ");
         projectTitle = scanner.next();
 
-        //Vede se la chat è già in memoria
+        //Cerca la chat in memoria
         chatAddress = getProjectChatAddress(projectTitle);
-        if (chatAddress == null) { //Caso in cui non abbia i riferimenti del progetto in memoria li chiedo al server
+        if (chatAddress == null) { //Caso in cui non abbia i riferimenti del progetto in memoria li chiede al server
             response = requestProjectChat(projectTitle);
         }
-        if (response == ANSWER_CODE.OP_OK) { //Se ho ricevuto la chat del progetto
-            System.out.println(findProjectChat(projectTitle).getMessages());
+        if (response == ANSWER_CODE.OP_OK) { //Se ha ricevuto la chat del progetto
+            System.out.println(findProjectChat(projectTitle).getMessages()+"\n");
+        }
+        else{
+            System.out.println("@> " + response+"\n");
         }
     }
 
@@ -682,7 +642,9 @@ public class Client {
                 while (!isInterrupted()) {
                     if (chatAddresses.isEmpty()) {
                         try {
+                            //tra una richiesta e la successiva aspetta
                             Thread.sleep(1000);
+                            //controlla che non sia stato interrotto
                             continue;
                         } catch (InterruptedException e) { //Caso in cui venga interrotto durante la sleep
                             return;
@@ -693,15 +655,18 @@ public class Client {
                     DatagramPacket dp = new DatagramPacket(data, data.length);
                     empty = false;
                     try {
+                        //aspetta di ricevere i messaggi in coda se ce ne sono
                         ms.setSoTimeout(1000);
                         ms.receive(dp);
                     } catch (SocketTimeoutException | SocketException e) {
+                        //caso in cui non ci siano messaggi in coda
                         empty = true;
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
                     if (!empty) {
                         String s = new String(dp.getData(), 0, dp.getLength());
+                        //seleziona la chat del progetto
                         ChatMessages cm = findProjectChat(chat.getProjectTitle());
                         if (cm != null) {
                             cm.add(s);
@@ -710,8 +675,6 @@ public class Client {
                     }
                     index = (index + 1) % chatAddresses.size();
                 }
-                System.err.println("Daemon thread: ESCO");
-                return;
             }
         };
         t.setDaemon(true);
@@ -719,7 +682,6 @@ public class Client {
         return t;
     }
 
-    // TODO: 20/04/21 mettere insieme chatMessages e chatAddresses 
 
     /*
      * REQUIRES: projectTitle != null
@@ -728,7 +690,7 @@ public class Client {
      */
     private static ChatMessages findProjectChat(String projectTitle) {
         if (projectTitle == null) {
-            System.err.println("findProjectChat() : projectTitle == null");
+            System.err.println("findProjectChat(): projectTitle == null");
             return null;
         }
         for (ChatMessages cm : chatMessages) {
@@ -745,7 +707,7 @@ public class Client {
      */
     private static ChatAddress getProjectChatAddress(String projectTitle) {
         if (projectTitle == null) {
-            System.err.println("getProjectChatAddress() : projectTitle == null");
+            System.err.println("getProjectChatAddress(): projectTitle == null");
             return null;
         }
         for (ChatAddress ca : chatAddresses) {
@@ -759,7 +721,7 @@ public class Client {
     /*
      * REQUIRES: projectTitle != null
      * EFFECTS: invia un messaggio di richiesta al server per ricevere l'indirizzo della chat e la chat history relativa a projectTitle
-     * RETURN: la rispsorta del server.
+     * RETURN: la risposta del server.
      */
     private static ANSWER_CODE requestProjectChat(String projectTitle) {
         if (projectTitle == null) {
@@ -777,16 +739,38 @@ public class Client {
         }
         return response;
     }
+    //-------- CHIUSURA -----------
+    private static void closeEverything() {
+        try {
+            System.out.println("Chiudo tutto.");
+            //Chiudo tutte le comunicazioni e i buffer, deregistro il client dalle callback e chiudo il thread daemon
+            scanner.close();
+            clientSocket.close();
 
+            if (daemon != null) daemon.interrupt();
+            if (readerIn != null) readerIn.close();
+            if (writerOut != null) writerOut.close();
+            if (serverInterface != null) serverInterface.unregisterForCallback(stub);
+            for (ChatAddress ca : chatAddresses) {
+                System.out.println("chiudo");
+                ca.getMulticastSocket().close();
+            }
 
-    // ------- CHIUSURA ------
+            //Chiude il Thread legato alla RMI
+            UnicastRemoteObject.unexportObject(callbackObj, true);
 
-    /*
-     * EFFECTS: setta un messaggio per chiudere la connessione col server.
-     * RETURN: il messaggio
-     */
-    private static Message closeConnection() {
-        return new Message(nickname, null, OP_CODE.CLOSE_CONNECTION, null, null);
+            chatMessages.clear();
+            userStatus.clear();
+            serverObj = null;
+            remote = null;
+            registry = null;
+            serverInterface = null;
+            callbackObj = null;
+            stub = null;
+            gson = null;
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
-
 }

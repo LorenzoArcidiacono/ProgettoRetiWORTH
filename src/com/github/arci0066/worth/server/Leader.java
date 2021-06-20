@@ -9,7 +9,6 @@ package com.github.arci0066.worth.server;
 
 
 import java.io.IOException;
-import java.net.SocketException;
 import java.util.Iterator;
 import java.util.concurrent.ThreadPoolExecutor;
 
@@ -45,13 +44,11 @@ public class Leader extends Thread {
             lastCountOp = countOperation;
             synchronized (socketList) {
                 Iterator<Connection> iterator = socketList.iterator();
-                // TODO: 27/01/21 posso impostare un timeout? se ho pochi client giro molto a vuoto, posso cambiarlo in base al lavoro del pool o al numero di client
                 while (iterator.hasNext()) { //scorro la lista delle connessioni
                     Connection connection = iterator.next();
                     try {
                         //Se la connessione non è chiusa, non è già servita ed ha inviato un messaggio
                         if (!connection.isClosed() && connection.isReaderReady() && !connection.isInUse()) {
-                            System.out.println("Richiesta di un client @: " + connection.getSocket());
                             // setto la connessione come servita per evitare di avviare più task
                             connection.setInUse(true);
                             // passo al pool un nuovo task per questa connessione
@@ -71,7 +68,6 @@ public class Leader extends Thread {
                 }
             }
 
-            // TODO: 10/06/21 Ragionare se va bene così
             if(lastCountOp == countOperation){ //se non sono state svolte operazioni aspetto
                 try {
                     Thread.sleep( ServerSettings.SLEEP_TIMEOUT);

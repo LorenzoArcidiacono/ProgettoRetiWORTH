@@ -1,3 +1,11 @@
+/*
+ *
+ * @Author Lorenzo Arcidiacono
+ * @Mail l.arcidiacono1@studenti.unipi.it
+ * @Matricola 534235
+ *
+ */
+
 package com.github.arci0066.worth.server;
 
 import com.github.arci0066.worth.enumeration.USER_STATUS;
@@ -11,7 +19,7 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /*CLASSE THREAD SAFE*/
-public class User implements Serializable {
+public class User implements Serializable{
     @Serial
     private static final long serialVersionUID = 1;
     @Expose
@@ -20,7 +28,6 @@ public class User implements Serializable {
     private String encPwd; //password criptata per poter essere salvata in memoria
     @Expose
     private transient USER_STATUS userStatus;
-    // TODO: 26/04/21 necessaria questa mutex?
     private transient ReadWriteLock lock; //Variabile di mutua esclusione
 
 // ------ Constructors ------
