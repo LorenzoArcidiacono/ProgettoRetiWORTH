@@ -39,7 +39,7 @@ public class ServerRMIImpl extends RemoteServer implements ServerRMI {
 
 
     @Override
-    public void unregisterForCallback(NotifyEventInterface client) throws RemoteException {
+    public synchronized void unregisterForCallback(NotifyEventInterface client) throws RemoteException {
         if (!clients.contains(client))
             return;
         if (clients.remove(client))
@@ -54,7 +54,7 @@ public class ServerRMIImpl extends RemoteServer implements ServerRMI {
     /* notifica di una variazione di valore dell'azione
 /* quando viene richiamato, fa il callback a tutti i client
 registrati */
-    public void update(String value) throws RemoteException {
+    public synchronized void update(String value) throws RemoteException {
         doCallbacks(value);
     }
 
